@@ -120,10 +120,9 @@ const lastStudent = ref<Student | null>(null);
 const form = useForm({
   student_id: '',
   term_id: '',
-  amount: '',
-  payment_type: '',
   payment_method: 'cash',
   payment_date: new Date().toISOString().split('T')[0],
+  payments: [] as Array<{ payment_type: string; amount: string }>,
 });
 
 // Auto-open modal if student_id in URL query
@@ -271,27 +270,22 @@ const isOverpaying = computed(() => {
 // Step navigation validation
 const canGoToStep2 = computed(() => !!form.student_id);
 
+const totalPaymentAmount = computed(() => {
+  return form.payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+});
+
 const canGoToStep3 = computed(() => {
-  if (!form.payment_type) return false;
-  const amountNum = parseFloat(form.amount);
-  if (isNaN(amountNum) || amountNum <= 0) return false;
-  return !isOverpaying.value;
+  return form.payments.length > 0 && totalPaymentAmount.value > 0;
 });
 
-// When a fee card is selected, auto-fill the remaining balance
-watch(() => form.payment_type, (newType) => {
-  const card = feeCardsWithBalance.value.find(c => c.fee_type === newType);
-  if (card) {
-    form.amount = String(card.balance);
-  }
-});
-
-// When student is selected, set term to active term and reset fee type
+// When student is selected, initialize bulk payments array
 watch(() => form.student_id, (newId) => {
   if (newId && props.activeTerm) {
     form.term_id = props.activeTerm.id;
-    form.payment_type = '';
-    form.amount = '';
+    form.payments = feeCardsWithBalance.value.map(card => ({
+      payment_type: card.fee_type,
+      amount: '',
+    }));
     studentSearch.value = '';
   }
 });
@@ -363,38 +357,27 @@ function selectStudent(student: Student) {
   studentSearch.value = '';
 }
 
-function payFullBalance(card: any) {
-  form.amount = String(card.balance);
-}
-
 function submit() {
   form.clearErrors();
 
   if (!form.student_id) {
     form.setError('student_id', 'Please select a student.');
-  }
-  if (!form.payment_type) {
-    form.setError('payment_type', 'Please select a fee type.');
-  }
-  if (!form.amount || parseFloat(form.amount) <= 0) {
-    form.setError('amount', 'Please enter a valid amount.');
-  } else if (isOverpaying.value) {
-    form.setError('amount', `Payment would exceed remaining balance of GHS ${selectedFeeCard.value?.balance}.`);
-  }
-
-  if (form.hasErrors) {
     return;
   }
 
-  form.post('/payments', {
+  const validPayments = form.payments.filter(p => parseFloat(p.amount) > 0);
+  if (validPayments.length === 0) {
+    form.setError('payments', 'Please enter at least one payment amount.');
+    return;
+  }
+
+  form.post('/payments/bulk', {
     onSuccess: (page: any) => {
-      // Store the newly created payment and the associated student for receipt
       lastPayment.value = page.props.payment as Payment;
-      // Also store the full student object (from props) for receipt
       const student = props.students.find(s => s.id === form.student_id);
       lastStudent.value = student || null;
       modalState.value = 'receipt';
-      form.reset(); // reset after storing, so form is clean for next payment
+      form.reset();
     },
     preserveScroll: true,
   });
@@ -774,7 +757,7 @@ function clearFilters() {
                   </div>
                 </div>
 
-                <!-- ==================== STEP 2: FEE TYPE & AMOUNT ==================== -->
+                <!-- ==================== STEP 2: BULK FEE ENTRY TABLE ==================== -->
                 <div v-else-if="currentStep === 2" class="space-y-6 animate-fade-in">
                   <!-- Selected Student Mini Header -->
                   <div class="flex items-center justify-between bg-amber-50/30 p-3 rounded-lg border border-amber-100/50 text-xs">
@@ -787,110 +770,70 @@ function clearFilters() {
                     <span class="font-mono font-bold text-amber-800 bg-amber-100/50 px-2 py-0.5 rounded">{{ selectedStudent?.student_id }}</span>
                   </div>
 
-                  <!-- Fee Type Selection Grid -->
-                  <div v-if="feeCardsWithBalance.length">
-                    <label class="block text-xs uppercase font-bold text-gray-500 tracking-wider mb-3">Select Fee Type *</label>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <button
-                        v-for="card in feeCardsWithBalance"
-                        :key="card.id"
-                        type="button"
-                        @click="form.payment_type = card.fee_type"
-                        :class="[
-                          'text-left p-4 border-2 rounded-xl transition-all duration-200 relative overflow-hidden group shadow-sm',
-                          form.payment_type === card.fee_type
-                            ? 'border-amber-500 bg-amber-50/60 ring-2 ring-amber-500/10'
-                            : 'border-amber-100/60 bg-white hover:border-amber-300'
-                        ]"
-                      >
-                        <div class="font-bold flex items-center justify-between text-sm">
-                          <span class="text-gray-900">{{ formatFeeType(card.fee_type) }}</span>
-                          <span v-if="card.fee_type === 'feeding_fees'" class="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md font-bold">Flexible</span>
-                        </div>
-                        
-                        <div v-if="card.fee_type !== 'feeding_fees'" class="grid grid-cols-3 gap-2 mt-3 text-xs border-t border-dashed border-gray-100 pt-2">
-                          <div>
-                            <span class="text-gray-500 block">Expected</span>
-                            <div class="font-bold text-gray-900 mt-0.5">{{ formatCurrencyCompact(card.amount, 0) }}</div>
-                          </div>
-                          <div>
-                            <span class="text-gray-500 block">Paid</span>
-                            <div class="font-bold text-green-600 mt-0.5">{{ formatCurrencyCompact(card.paid, 0) }}</div>
-                          </div>
-                          <div>
-                            <span class="text-gray-500 block">Outstanding</span>
-                            <div :class="['font-bold mt-0.5', card.balance > 0 ? 'text-red-600' : 'text-green-600']">
-                              {{ formatCurrencyCompact(card.balance, 0) }}
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Feeding Fee Suggestion -->
-                        <div v-else class="mt-2 text-xs space-y-1 border-t border-dashed border-gray-100 pt-2">
-                          <div class="flex items-center justify-between text-gray-600">
-                            <span>Daily Rate:</span>
-                            <span class="font-bold text-gray-900">{{ formatCurrencyCompact(card.amount, 0) }}</span>
-                          </div>
-                          <div class="flex items-center justify-between text-gray-500 text-[10px]">
-                            <span>Weekly (5 days):</span>
-                            <span class="font-semibold">{{ formatCurrencyCompact(card.amount * 5, 0) }}</span>
-                          </div>
-                        </div>
-
-                        <div v-if="card.balance > 0 && card.fee_type !== 'feeding_fees'" class="absolute right-0 bottom-0 scale-75 origin-bottom-right">
-                          <span class="bg-red-100 text-red-800 px-2 py-0.5 rounded-l-md text-[10px] font-bold">Outstanding</span>
-                        </div>
-                      </button>
+                  <!-- Bulk Payment Table -->
+                  <div v-if="feeCardsWithBalance.length" class="space-y-3">
+                    <label class="block text-xs uppercase font-bold text-gray-500 tracking-wider">Enter Amounts for Each Fee Type *</label>
+                    <div class="overflow-x-auto border border-amber-100 rounded-xl shadow-sm">
+                      <table class="w-full text-sm">
+                        <thead class="bg-amber-50 border-b border-amber-100">
+                          <tr>
+                            <th class="px-4 py-3 text-left font-bold text-gray-700">Fee Type</th>
+                            <th class="px-4 py-3 text-right font-bold text-gray-700 w-24">Expected</th>
+                            <th class="px-4 py-3 text-right font-bold text-gray-700 w-24">Paid</th>
+                            <th class="px-4 py-3 text-right font-bold text-gray-700 w-24">Outstanding</th>
+                            <th class="px-4 py-3 text-right font-bold text-gray-700 w-32">Pay Now (GHS)</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-amber-50">
+                          <tr v-for="(payment, idx) in form.payments" :key="payment.payment_type" class="hover:bg-amber-50/30">
+                            <td class="px-4 py-3 font-semibold text-gray-900">{{ formatFeeType(payment.payment_type) }}</td>
+                            <td class="px-4 py-3 text-right text-gray-600">
+                              {{ formatCurrencyCompact(feeCardsWithBalance.find(c => c.fee_type === payment.payment_type)?.amount || 0, 2) }}
+                            </td>
+                            <td class="px-4 py-3 text-right text-green-600 font-semibold">
+                              {{ formatCurrencyCompact(feeCardsWithBalance.find(c => c.fee_type === payment.payment_type)?.paid || 0, 2) }}
+                            </td>
+                            <td class="px-4 py-3 text-right font-semibold" :class="[
+                              (feeCardsWithBalance.find(c => c.fee_type === payment.payment_type)?.balance || 0) > 0 ? 'text-red-600' : 'text-green-600'
+                            ]">
+                              {{ formatCurrencyCompact(feeCardsWithBalance.find(c => c.fee_type === payment.payment_type)?.balance || 0, 2) }}
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                              <input
+                                v-model="form.payments[idx].amount"
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                class="w-full px-2 py-1.5 border border-gray-300 rounded-lg bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm font-semibold text-gray-900 text-right"
+                              />
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-                    <p v-if="form.errors.payment_type" class="text-red-500 text-xs mt-2 font-medium">{{ form.errors.payment_type }}</p>
+                    <p v-if="form.errors.payments" class="text-red-500 text-xs mt-2 font-medium">{{ form.errors.payments }}</p>
                   </div>
 
-                  <!-- Amount Input Field -->
-                  <div v-if="form.payment_type" class="space-y-2">
-                    <label class="block text-xs uppercase font-bold text-gray-500 tracking-wider">Amount to Pay (GHS) *</label>
-                    <div class="flex gap-2 relative rounded-xl shadow-sm">
-                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span class="text-gray-500 font-bold text-sm">GHS</span>
-                      </div>
-                      <input
-                        v-model="form.amount"
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        required
-                        class="w-full pl-12 pr-32 py-3 border border-gray-300 rounded-xl bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-lg font-bold text-gray-900"
-                      />
-                      <button
-                        v-if="form.payment_type !== 'feeding_fees' && selectedFeeCard"
-                        type="button"
-                        @click="payFullBalance(selectedFeeCard)"
-                        class="absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold rounded-lg transition"
-                      >
-                        Full Balance
-                      </button>
+                  <!-- Summary -->
+                  <div v-if="totalPaymentAmount > 0" class="bg-lime-50/50 border border-lime-200 rounded-xl p-4 text-sm">
+                    <div class="flex items-center justify-between">
+                      <span class="font-semibold text-gray-700">Total to Pay:</span>
+                      <span class="font-bold text-lg text-lime-700">GHS {{ parseFloat(totalPaymentAmount.toString()).toFixed(2) }}</span>
                     </div>
-                    <p v-if="form.payment_type === 'feeding_fees'" class="text-xs text-gray-500 mt-1">
-                      💡 Override with actual payment amount as needed.
-                    </p>
-                    <p v-if="isOverpaying" class="text-amber-700 text-xs mt-1.5 flex items-center gap-1.5 font-semibold bg-amber-50 border border-amber-200 p-2.5 rounded-xl">
-                      <AlertCircle class="w-4 h-4 text-amber-600 flex-shrink-0" />
-                      Warning: Amount exceeds remaining balance of {{ formatCurrencyCompact(selectedFeeCard?.balance || 0, 2) }} for this fee.
-                    </p>
-                    <p v-if="form.errors.amount" class="text-red-500 text-xs mt-1.5 font-medium">{{ form.errors.amount }}</p>
                   </div>
                 </div>
 
                 <!-- ==================== STEP 3: METHOD, DATE & REVIEW ==================== -->
                 <div v-else-if="currentStep === 3" class="space-y-6">
-                  <!-- Selected Student + Fee Mini Header -->
+                  <!-- Selected Student + Bulk Payment Summary -->
                   <div class="bg-amber-50/30 p-3 rounded-lg border border-amber-100/50 text-xs space-y-1">
                     <div class="flex items-center justify-between font-bold text-gray-900">
                       <span>{{ selectedStudent?.first_name }} {{ selectedStudent?.last_name }}</span>
                       <span class="font-mono text-amber-800">{{ selectedStudent?.student_id }}</span>
                     </div>
-                    <div class="flex items-center justify-between text-gray-600 font-medium">
-                      <span>Fee Type: {{ formatFeeType(form.payment_type) }}</span>
-                      <span>Amount: GHS {{ parseFloat(form.amount || 0).toFixed(2) }}</span>
+                    <div class="text-gray-600 font-medium">
+                      <span>Bulk Payment: {{ form.payments.filter(p => parseFloat(p.amount) > 0).length }} fee type(s)</span>
+                      <span class="ml-2">| Total: GHS {{ parseFloat(totalPaymentAmount.toString()).toFixed(2) }}</span>
                     </div>
                   </div>
 
@@ -961,13 +904,24 @@ function clearFilters() {
 
                   <!-- Checkout Review Box -->
                   <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3 shadow-inner">
-                    <h4 class="text-xs uppercase font-extrabold text-gray-600 tracking-wider border-b border-gray-200 pb-2">Review Payment Information</h4>
-                    <dl class="grid grid-cols-2 gap-y-2 text-xs">
-                      <dt class="text-gray-500 font-semibold">Student Name:</dt>
-                      <dd class="text-gray-900 font-bold text-right">{{ selectedStudent?.first_name }} {{ selectedStudent?.last_name }}</dd>
+                    <h4 class="text-xs uppercase font-extrabold text-gray-600 tracking-wider border-b border-gray-200 pb-2">Review Bulk Payment</h4>
 
-                      <dt class="text-gray-500 font-semibold">Fee Type Category:</dt>
-                      <dd class="text-gray-900 font-bold text-right">{{ formatFeeType(form.payment_type) }}</dd>
+                    <!-- Payment Items Table -->
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-xs">
+                        <tbody class="divide-y divide-gray-200">
+                          <tr v-for="payment in form.payments.filter(p => parseFloat(p.amount) > 0)" :key="payment.payment_type">
+                            <td class="py-2 text-gray-600">{{ formatFeeType(payment.payment_type) }}</td>
+                            <td class="py-2 text-right font-bold text-gray-900">GHS {{ parseFloat(payment.amount || 0).toFixed(2) }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- Summary Rows -->
+                    <dl class="grid grid-cols-2 gap-y-2 text-xs border-t border-gray-200 pt-3">
+                      <dt class="text-gray-500 font-semibold">Student:</dt>
+                      <dd class="text-gray-900 font-bold text-right">{{ selectedStudent?.first_name }} {{ selectedStudent?.last_name }}</dd>
 
                       <dt class="text-gray-500 font-semibold">Academic Period:</dt>
                       <dd class="text-gray-900 font-bold text-right">{{ activeTerm?.name }}</dd>
@@ -978,9 +932,9 @@ function clearFilters() {
                       <dt class="text-gray-500 font-semibold">Date of Record:</dt>
                       <dd class="text-gray-900 font-bold text-right">{{ form.payment_date }}</dd>
 
-                      <dt class="text-amber-800 font-bold text-sm border-t border-dashed border-gray-200 pt-2 mt-1">Amount to Record:</dt>
+                      <dt class="text-amber-800 font-bold text-sm border-t border-dashed border-gray-200 pt-2 mt-1">Total Amount:</dt>
                       <dd class="text-lime-700 font-extrabold text-right text-base border-t border-dashed border-gray-200 pt-2 mt-1">
-                        GHS {{ parseFloat(form.amount || 0).toFixed(2) }}
+                        GHS {{ parseFloat(totalPaymentAmount.toString()).toFixed(2) }}
                       </dd>
                     </dl>
                   </div>

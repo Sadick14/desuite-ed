@@ -63,6 +63,48 @@ class PaymentController extends Controller
         return back()->with('payment', $payment->load('term'));
     }
 
+    public function storeBulk(Request $request)
+    {
+        $data = $request->validate([
+            'student_id' => ['required', 'exists:students,id'],
+            'term_id' => ['required', 'exists:terms,id'],
+            'payment_method' => ['required', 'in:cash,momo,bank'],
+            'payment_date' => ['required', 'date'],
+            'payments' => ['required', 'array', 'min:1'],
+            'payments.*.payment_type' => ['required', 'in:school_fees,feeding_fees,registration_fees,others'],
+            'payments.*.amount' => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $student = Student::findOrFail($data['student_id']);
+        $term = Term::findOrFail($data['term_id']);
+
+        $lastPayment = DB::transaction(function () use ($data, $student, $term) {
+            $payments = [];
+
+            foreach ($data['payments'] as $paymentData) {
+                $amount = (float) $paymentData['amount'];
+                if ($amount <= 0) {
+                    continue;
+                }
+
+                $payments[] = Payment::create([
+                    'student_id' => $data['student_id'],
+                    'term_id' => $data['term_id'],
+                    'amount' => $amount,
+                    'payment_type' => $paymentData['payment_type'],
+                    'payment_method' => $data['payment_method'],
+                    'payment_date' => $data['payment_date'],
+                    'receipt_number' => Payment::generateReceiptNumber(),
+                    'user_id' => Auth::id(),
+                ]);
+            }
+
+            return end($payments);
+        });
+
+        return back()->with('payment', $lastPayment->load('term'));
+    }
+
     public function update(Request $request, Payment $payment)
     {
         $data = $request->validate([

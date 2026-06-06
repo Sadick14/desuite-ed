@@ -75,6 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     */
     Route::resource('fee-structures', FeeStructureController::class);
     Route::resource('payments', PaymentController::class)->except(['show', 'create', 'edit']);
+    Route::post('payments/bulk', [PaymentController::class, 'storeBulk'])->name('payments.storeBulk');
 
     /*
     |--------------------------------------------------------------------------
