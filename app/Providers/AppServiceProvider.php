@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+
 use App\Models\AcademicYear;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\URL; // <-- Make sure to import this
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,6 +38,10 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->registerObservers();
+        // Force HTTPS if the application environment is set to production
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
     }
 
     /**
