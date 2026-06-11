@@ -27,3 +27,5 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+docker/nginx/ssl/*.pem
+docker/nginx/ssl/*.key

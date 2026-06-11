@@ -1,20 +1,27 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import {
-    LayoutGrid,
-    Users,
-    GraduationCap,
-    CreditCard,
-    Receipt,
-    Wallet,
-    Building2,
-    Settings,
-    BookOpen,
-    FolderGit2,
-    ChevronDown,
-    BarChart3,
-    Clock,
-    ArrowRight,
+  LayoutGrid,
+  Users,
+  GraduationCap,
+  CreditCard,
+  Receipt,
+  Wallet,
+  Building2,
+  Settings,
+  BookOpen,
+  FolderGit2,
+  ChevronDown,
+  BarChart3,
+  Clock,
+  ArrowRight,
+  MessageSquare,
+  Calendar,
+  FileText,
+  FileCheck2,
+  Scale,
+  Percent,
+  FilePlus2,
 } from '@lucide/vue';
 
 import {
@@ -38,45 +45,82 @@ import {
 
 import type { NavItem } from '@/types';
 
+const page = usePage();
 const dashboardUrl = computed(() => '/dashboard');
 
-const navigationGroups = computed(() => [
+const hasPermission = (perm: string) => {
+  const permissions = page.props.auth?.permissions || [];
+  return permissions.includes(perm);
+};
+
+const navigationGroups = computed(() => {
+  const allItems = [
     {
-        title: 'Core',
-        icon: LayoutGrid,
-        items: [
-            { title: 'Dashboard', href: dashboardUrl.value, icon: LayoutGrid },
-            { title: 'Students', href: '/students', icon: Users },
-            { title: 'Payments', href: '/payments', icon: CreditCard },
-            { title: 'Expenses', href: '/expenses', icon: Wallet },
-        ],
+      title: 'Core',
+      icon: LayoutGrid,
+      items: [
+        { title: 'Dashboard', href: dashboardUrl.value, icon: LayoutGrid },
+        { title: 'Users', href: '/users', icon: Users, permission: 'team:update' },
+        { title: 'Students', href: '/students', icon: GraduationCap, permission: 'students:view' },
+        { title: 'Attendance', href: '/attendance', icon: Calendar, permission: 'attendance:view' },
+        { title: 'Payments', href: '/payments', icon: CreditCard, permission: 'payments:view' },
+        { title: 'Expenses', href: '/expenses', icon: Wallet, permission: 'expenses:view' },
+        { title: 'SMS', href: '/sms', icon: MessageSquare, permission: 'sms:view' },
+      ],
     },
     {
-        title: 'Finance',
-        icon: CreditCard,
-        items: [
-            { title: 'Analytics', href: '/analytics', icon: BarChart3 },
-            { title: 'Reports', href: '/reports', icon: BarChart3 },
-            { title: 'Fee Structures', href: '/fee-structures', icon: Receipt },
-            { title: 'Expense Categories', href: '/expense-categories', icon: FolderGit2 },
-        ],
+      title: 'Academics',
+      icon: BookOpen,
+      items: [
+        { title: 'Courses', href: '/courses', icon: BookOpen, permission: 'courses:view' },
+        { title: 'Exams', href: '/exams', icon: FileText, permission: 'exams:view' },
+        { title: 'Grades', href: '/grades', icon: FileCheck2, permission: 'grades:view' },
+        { title: 'Report Cards', href: '/reports', icon: FileCheck2, permission: 'reports:view' },
+      ],
     },
     {
-        title: 'System',
-        icon: Settings,
-        items: [
-            { title: 'School Settings', href: '/school', icon: Building2 },
-            { title: 'Academic Years', href: '/academic-years', icon: Clock },
-            { title: 'Classes', href: '/classes', icon: GraduationCap },
-            { title: 'Terms', href: '/terms', icon: BookOpen },
-            { title: 'Audit Logs', href: '/audit-logs', icon: BookOpen },
-            { title: 'Promotions', href: '/promotions', icon: ArrowRight },
-        ],
+      title: 'Finance',
+      icon: CreditCard,
+      items: [
+        { title: 'Analytics', href: '/analytics', icon: BarChart3, permission: 'payments:view' },
+        { title: 'Fee Structures', href: '/fee-structures', icon: Receipt, permission: 'payments:manage' },
+        { title: 'Expense Categories', href: '/expense-categories', icon: FolderGit2, permission: 'expenses:manage' },
+      ],
     },
-]);
+    {
+      title: 'System',
+      icon: Settings,
+      items: [
+        { title: 'School Settings', href: '/school', icon: Building2, permission: 'team:update' },
+        { title: 'Academic Years', href: '/academic-years', icon: Clock, permission: 'team:update' },
+        { title: 'Classes', href: '/classes', icon: GraduationCap, permission: 'students:manage' },
+        { title: 'Terms', href: '/terms', icon: BookOpen, permission: 'team:update' },
+        { title: 'Exam Templates', href: '/exam-templates', icon: FilePlus2, permission: 'team:update' },
+        { title: 'Grade Scale Rules', href: '/grade-scale-rules', icon: Scale, permission: 'team:update' },
+        { title: 'Assessment Settings', href: '/assessment-settings', icon: Percent, permission: 'team:update' },
+        { title: 'Audit Logs', href: '/audit-logs', icon: BookOpen, permission: 'team:update' },
+        { title: 'Promotions', href: '/promotions', icon: ArrowRight, permission: 'students:manage' },
+      ],
+    },
+  ];
+
+  // Filter groups and items based on permissions
+  return allItems
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item => {
+        // If no permission specified, show to everyone
+        if (!item.permission) return true;
+        // Otherwise check if user has permission
+        return hasPermission(item.permission);
+      }),
+    }))
+    .filter(group => group.items.length > 0); // Only keep groups with at least one item
+});
 
 const openGroups = ref<Record<string, boolean>>({
     Core: true,
+    Academics: false,
     Finance: false,
     System: false,
 });

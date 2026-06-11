@@ -26,6 +26,10 @@ const form = useForm({
   academic_year_id: props.reportType === 'academic_year' ? props.filterId : null,
 });
 
+const handlePrint = () => {
+  window.print();
+};
+
 const downloadPdf = async () => {
   downloadingPdf.value = true;
   try {
@@ -287,7 +291,7 @@ const stats = getTotalStats();
           Download CSV
         </button>
         <button
-          @click="window.print()"
+          @click="handlePrint"
           class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
         >
           <Printer class="w-4 h-4" />

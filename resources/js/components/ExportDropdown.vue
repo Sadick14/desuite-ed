@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Download, ChevronDown, FileSpreadsheet, FileText } from '@lucide/vue';
+import { Download, ChevronDown, FileSpreadsheet, FileText } from 'lucide-vue-next';
 import {
     DropdownMenu,
     DropdownMenuContent,

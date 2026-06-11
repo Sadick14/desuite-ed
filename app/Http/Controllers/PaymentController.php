@@ -78,7 +78,7 @@ class PaymentController extends Controller
         $student = Student::findOrFail($data['student_id']);
         $term = Term::findOrFail($data['term_id']);
 
-        $lastPayment = DB::transaction(function () use ($data, $student, $term) {
+        $lastPayment = DB::transaction(function () use ($data) {
             $payments = [];
 
             foreach ($data['payments'] as $paymentData) {

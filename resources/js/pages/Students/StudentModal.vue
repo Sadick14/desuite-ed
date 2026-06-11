@@ -31,6 +31,11 @@ const form = useForm({
   parent_phone: '',
   address: '',
   admission_date: '',
+  medical_notes: '',
+  allergies: '',
+  emergency_contact_name: '',
+  emergency_contact_phone: '',
+  emergency_contact_relationship: '',
 });
 
 const resetForm = () => {
@@ -50,6 +55,11 @@ watch(() => props.student, (newStudent) => {
     form.parent_phone = newStudent.parent_phone || '';
     form.address = newStudent.address || '';
     form.admission_date = newStudent.admission_date || '';
+    form.medical_notes = newStudent.medical_notes || '';
+    form.allergies = newStudent.allergies || '';
+    form.emergency_contact_name = newStudent.emergency_contact_name || '';
+    form.emergency_contact_phone = newStudent.emergency_contact_phone || '';
+    form.emergency_contact_relationship = newStudent.emergency_contact_relationship || '';
     formErrors.value = {};
   } else {
     resetForm();
@@ -85,7 +95,7 @@ const canContinue = computed(() => {
 
 // Next step
 const next = () => {
-  if (step.value < 4 && canContinue.value) {
+  if (step.value < 5 && canContinue.value) {
     step.value++;
   }
 };
@@ -166,7 +176,7 @@ onMounted(() => document.addEventListener('keydown', onEscape));
           <div class="px-6 pt-4">
             <div class="flex items-center justify-between">
               <div
-                v-for="i in 4"
+                v-for="i in 5"
                 :key="i"
                 class="flex flex-col items-center flex-1"
               >
@@ -182,7 +192,7 @@ onMounted(() => document.addEventListener('keydown', onEscape));
                   <span v-else>{{ i }}</span>
                 </div>
                 
-                <div class="h-[3px] w-full bg-amber-50 mt-2.5 rounded-full overflow-hidden">
+                <div v-if="i < 5" class="h-[3px] w-full bg-amber-50 mt-2.5 rounded-full overflow-hidden">
                   <div
                     v-if="step > i"
                     class="h-full bg-green-500 transition-all duration-300"
@@ -202,6 +212,7 @@ onMounted(() => document.addEventListener('keydown', onEscape));
               <span>Personal</span>
               <span>Guardian</span>
               <span>Admission</span>
+              <span>Medical</span>
             </div>
           </div>
 
@@ -318,6 +329,59 @@ onMounted(() => document.addEventListener('keydown', onEscape));
                 />
                 <p v-if="formErrors.admission_date" class="text-red-600 text-xs mt-1.5 font-medium">{{ formErrors.admission_date }}</p>
               </div>
+            </div>
+
+            <div v-if="step === 5" class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Medical Notes</label>
+                <textarea
+                  v-model="form.medical_notes"
+                  rows="3"
+                  class="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Any relevant medical conditions, disabilities, or health information"
+                ></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Known Allergies</label>
+                <input
+                  v-model="form.allergies"
+                  type="text"
+                  class="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="E.g., Peanuts, Penicillin, Bees"
+                />
+              </div>
+              <div class="pt-3 border-t border-amber-100">
+                <p class="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">Emergency Contact Information</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Emergency Contact Name</label>
+                    <input
+                      v-model="form.emergency_contact_name"
+                      type="text"
+                      class="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="Full Name"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Relationship to Student</label>
+                    <input
+                      v-model="form.emergency_contact_relationship"
+                      type="text"
+                      class="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="E.g., Uncle, Aunt, Grandparent"
+                    />
+                  </div>
+                </div>
+                <div class="mt-3">
+                  <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Emergency Phone</label>
+                  <input
+                    v-model="form.emergency_contact_phone"
+                    type="tel"
+                    class="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm font-mono font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="+233 XX XXX XXXX"
+                  />
+                </div>
+              </div>
               
               <div class="bg-amber-50/50 border border-amber-100 rounded-xl p-4 text-xs font-medium">
                 <p class="font-bold text-amber-900 uppercase tracking-wider text-[10px]">Verify data compilation ledger:</p>
@@ -325,6 +389,7 @@ onMounted(() => document.addEventListener('keydown', onEscape));
                   <li><strong class="text-gray-400 font-bold">Assigned Cohort:</strong> {{ classes.find(c => c.id == form.school_class_id)?.name || '—' }}</li>
                   <li><strong class="text-gray-400 font-bold">Identity Mapping:</strong> {{ form.first_name }} {{ form.last_name }}</li>
                   <li><strong class="text-gray-400 font-bold">Guardian Sync:</strong> {{ form.parent_name }} ({{ form.parent_phone }})</li>
+                  <li><strong class="text-gray-400 font-bold">Medical File:</strong> {{ form.medical_notes ? 'On file' : 'No notes' }}</li>
                 </ul>
               </div>
             </div>
@@ -348,7 +413,7 @@ onMounted(() => document.addEventListener('keydown', onEscape));
               </button>
 
               <button
-                v-if="step < 4"
+                v-if="step < 5"
                 @click="next"
                 :disabled="!canContinue"
                 class="px-4 py-2 bg-amber-900 text-white rounded-xl hover:bg-amber-950 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold transition-all flex items-center gap-1 focus:outline-none"

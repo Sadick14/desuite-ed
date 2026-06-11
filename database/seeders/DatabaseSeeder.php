@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
             FeeStructureSeeder::class,
             PaymentSeeder::class,
             ExpenseSeeder::class,
+            SmsTemplateSeeder::class,
         ]);
     }
 }

@@ -11,8 +11,8 @@ import {
   Folder,
 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
-import { formatCurrencyCompact } from '@/utils/format';
 import ExportDropdown from '@/components/ExportDropdown.vue';
+import { formatCurrencyCompact } from '@/utils/format';
 
 type Expense = {
   id: number;
@@ -60,7 +60,7 @@ const filteredExpenses = computed(() => {
   }
 
   if (filterCategory.value) {
-    result = result.filter(e => e.category.id === parseInt(filterCategory.value));
+    result = result.filter(e => e.category && e.category.id === parseInt(filterCategory.value));
   }
 
   return result;
@@ -104,21 +104,25 @@ function openEdit(expense: Expense) {
 function submit() {
   if (!form.expense_category_id) {
     alert('Please select a category');
+
     return;
   }
 
   if (!form.title) {
     alert('Please enter a title');
+
     return;
   }
 
   if (!form.amount) {
     alert('Please enter an amount');
+
     return;
   }
 
   if (!form.expense_date) {
     alert('Please select a date');
+    
     return;
   }
 

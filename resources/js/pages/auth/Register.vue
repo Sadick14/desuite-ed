@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { GraduationCap, ArrowLeft, Eye, EyeOff } from 'lucide-vue-next';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-vue-next';
 import { ref } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import InputError from '@/components/InputError.vue';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { login, home } from '@/routes';
 
 
-defineOptions({ layout: null });
+defineOptions({ layout: undefined });
 
 defineProps<{
     passwordRules: string;

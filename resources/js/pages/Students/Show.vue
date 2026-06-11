@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import {
   User,
   Phone,
@@ -139,6 +139,23 @@ const formatDate = (date: string) => {
             Overview
           </button>
           <button
+            @click="activeTab = 'medical'"
+            :class="[
+              'py-3.5 px-1 text-xs font-bold tracking-wider uppercase border-b-2 transition-all duration-200 focus:outline-none',
+              activeTab === 'medical'
+                ? 'border-amber-500 text-gray-900'
+                : 'border-transparent text-gray-500 hover:text-gray-900'
+            ]"
+          >
+            Medical & Emergency
+          </button>
+          <Link
+            :href="route('attendance.student', student)"
+            class="py-3.5 px-1 text-xs font-bold tracking-wider uppercase border-b-2 border-transparent text-gray-500 hover:text-gray-900"
+          >
+            Attendance History
+          </Link>
+          <button
             @click="activeTab = 'financial'"
             :class="[
               'py-3.5 px-1 text-xs font-bold tracking-wider uppercase border-b-2 transition-all duration-200 focus:outline-none',
@@ -226,6 +243,49 @@ const formatDate = (date: string) => {
               <div class="flex items-start gap-2 mt-1">
                 <MapPin class="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
                 <p class="text-xs text-gray-600 leading-relaxed">{{ student.address || '—' }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEDICAL & EMERGENCY TAB CONTENT -->
+      <div v-if="activeTab === 'medical'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl shadow-md shadow-amber-900/[0.01] border border-amber-100 p-6">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-gray-900 flex items-center gap-2 mb-5 border-b border-amber-50 pb-3">
+            <User class="w-4 h-4 text-amber-700" />
+            Medical Records
+          </h2>
+          <div class="space-y-4">
+            <div>
+              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Known Allergies</p>
+              <p class="text-sm font-medium text-gray-900 mt-0.5">{{ student.allergies || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Medical Notes</p>
+              <p class="text-sm text-gray-600 mt-0.5 leading-relaxed">{{ student.medical_notes || 'No medical notes on file' }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-md shadow-amber-900/[0.01] border border-amber-100 p-6">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-gray-900 flex items-center gap-2 mb-5 border-b border-amber-50 pb-3">
+            <Phone class="w-4 h-4 text-red-600" />
+            Emergency Contact Information
+          </h2>
+          <div class="space-y-4">
+            <div>
+              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Emergency Contact Name</p>
+              <p class="text-sm font-semibold text-gray-900 mt-0.5">{{ student.emergency_contact_name || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Relationship to Student</p>
+              <p class="text-sm font-medium text-gray-900 mt-0.5">{{ student.emergency_contact_relationship || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Emergency Phone</p>
+              <div class="flex items-center gap-2 mt-1 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+                <Phone class="w-3.5 h-3.5 text-red-600" />
+                <p class="text-xs font-bold text-gray-900 font-mono">{{ student.emergency_contact_phone || '—' }}</p>
               </div>
             </div>
           </div>

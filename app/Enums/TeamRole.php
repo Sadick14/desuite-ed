@@ -6,6 +6,9 @@ enum TeamRole: string
 {
     case Owner = 'owner';
     case Admin = 'admin';
+    case Teacher = 'teacher';
+    case Student = 'student';
+    case Parent = 'parent';
     case Member = 'member';
 
     /**
@@ -13,7 +16,14 @@ enum TeamRole: string
      */
     public function label(): string
     {
-        return ucfirst($this->value);
+        return match ($this) {
+            self::Owner => 'Owner',
+            self::Admin => 'Administrator',
+            self::Teacher => 'Teacher',
+            self::Student => 'Student',
+            self::Parent => 'Parent/Guardian',
+            self::Member => 'Member',
+        };
     }
 
     /**
@@ -29,8 +39,53 @@ enum TeamRole: string
                 TeamPermission::UpdateTeam,
                 TeamPermission::CreateInvitation,
                 TeamPermission::CancelInvitation,
+                TeamPermission::ManageStudents,
+                TeamPermission::ViewStudents,
+                TeamPermission::ManageCourses,
+                TeamPermission::ViewCourses,
+                TeamPermission::ManageExams,
+                TeamPermission::ViewExams,
+                TeamPermission::ManageGrades,
+                TeamPermission::ViewGrades,
+                TeamPermission::ManageAttendance,
+                TeamPermission::ViewAttendance,
+                TeamPermission::ManagePayments,
+                TeamPermission::ViewPayments,
+                TeamPermission::ManageExpenses,
+                TeamPermission::ViewExpenses,
+                TeamPermission::SendSms,
+                TeamPermission::ViewSms,
+                TeamPermission::GenerateReports,
+                TeamPermission::ViewReports,
             ],
-            self::Member => [],
+            self::Teacher => [
+                TeamPermission::ViewStudents,
+                TeamPermission::ViewCourses,
+                TeamPermission::ViewExams,
+                TeamPermission::ManageGrades,
+                TeamPermission::ViewGrades,
+                TeamPermission::ManageAttendance,
+                TeamPermission::ViewAttendance,
+                TeamPermission::ViewReports,
+            ],
+            self::Student => [
+                TeamPermission::ViewStudents,
+                TeamPermission::ViewCourses,
+                TeamPermission::ViewExams,
+                TeamPermission::ViewGrades,
+                TeamPermission::ViewAttendance,
+                TeamPermission::ViewReports,
+            ],
+            self::Parent => [
+                TeamPermission::ViewStudents,
+                TeamPermission::ViewGrades,
+                TeamPermission::ViewAttendance,
+                TeamPermission::ViewReports,
+            ],
+            self::Member => [
+                TeamPermission::ViewStudents,
+                TeamPermission::ViewCourses,
+            ],
         };
     }
 
@@ -49,9 +104,12 @@ enum TeamRole: string
     public function level(): int
     {
         return match ($this) {
-            self::Owner => 3,
-            self::Admin => 2,
-            self::Member => 1,
+            self::Owner => 6,
+            self::Admin => 5,
+            self::Teacher => 4,
+            self::Member => 3,
+            self::Parent => 2,
+            self::Student => 1,
         };
     }
 

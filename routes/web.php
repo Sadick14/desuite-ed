@@ -1,20 +1,28 @@
 <?php
 
 use App\Http\Controllers\AcademicYearController;
+use App\Http\Controllers\AssessmentSettingController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
+use App\Http\Controllers\ExamController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FeeStructureController;
+use App\Http\Controllers\GradeController;
+use App\Http\Controllers\GradeScaleRuleController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SchoolClassController;
 use App\Http\Controllers\SchoolController;
+use App\Http\Controllers\SmsController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TermController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -28,6 +36,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     */
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
+        
+    /*
+    |--------------------------------------------------------------------------
+    | USER MANAGEMENT
+    |--------------------------------------------------------------------------
+    */
+    Route::resource('users', UserController::class);
 
     /*
     |--------------------------------------------------------------------------
@@ -36,6 +51,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     */
     Route::resource('school', SchoolController::class)
         ->only(['index', 'store', 'update']);
+
+    /*
+    |--------------------------------------------------------------------------
+    | GRADING & ASSESSMENT SETTINGS
+    |--------------------------------------------------------------------------
+    */
+    Route::resource('grade-scale-rules', GradeScaleRuleController::class);
+    Route::resource('assessment-settings', AssessmentSettingController::class);
+    Route::resource('exam-templates', ExamTemplateController::class)->only(['index', 'store', 'update', 'destroy']);
 
     /*
     |--------------------------------------------------------------------------
@@ -101,6 +125,57 @@ Route::middleware(['auth', 'verified'])->group(function () {
     */
     Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('audit-logs.show');
+
+    /*
+    |--------------------------------------------------------------------------
+    | ATTENDANCE TRACKING
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('/', [AttendanceController::class, 'index'])->name('index');
+        Route::post('/store', [AttendanceController::class, 'store'])->name('store');
+        Route::get('/students/{student}', [AttendanceController::class, 'show'])->name('student');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACADEMICS: COURSES, EXAMS, GRADES
+    |--------------------------------------------------------------------------
+    */
+    Route::resource('courses', CourseController::class);
+    Route::resource('exams', ExamController::class);
+    Route::prefix('grades')->name('grades.')->group(function () {
+        Route::get('/', [GradeController::class, 'index'])->name('index');
+        Route::post('/store', [GradeController::class, 'store'])->name('store');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | REPORTS & REPORT CARDS
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::get('/students/{student}', [ReportController::class, 'show'])->name('show');
+        Route::get('/students/{student}/download', [ReportController::class, 'download'])->name('download');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | SMS COMMUNICATION
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('sms')->name('sms.')->group(function () {
+        Route::get('/', [SmsController::class, 'index'])->name('index');
+        Route::get('/compose', [SmsController::class, 'compose'])->name('compose');
+        Route::get('/templates', [SmsController::class, 'templates'])->name('templates');
+        Route::post('/send', [SmsController::class, 'send'])->name('send');
+        Route::post('/students/{student}/send', [SmsController::class, 'sendToStudent'])->name('send.student');
+        Route::post('/payment-confirmation', [SmsController::class, 'sendPaymentConfirmation'])->name('payment-confirmation');
+        Route::post('/balance-reminders', [SmsController::class, 'sendBalanceReminders'])->name('balance-reminders');
+        Route::post('/{smsLog}/resend', [SmsController::class, 'resend'])->name('resend');
+        Route::delete('/{smsLog}', [SmsController::class, 'destroy'])->name('destroy');
+    });
 
     /*
     |--------------------------------------------------------------------------

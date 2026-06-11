@@ -13,7 +13,7 @@ import { register, home } from '@/routes';
 import { request } from '@/routes/password';
 
 
-defineOptions({ layout: null }); // Prevents any global layout
+defineOptions({ layout: undefined }); // Prevents any global layout
 
 defineProps<{
     status?: string;

@@ -22,8 +22,8 @@ import {
   Share2,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted } from 'vue';
-import { formatCurrencyCompact } from '@/utils/format';
 import ExportDropdown from '@/components/ExportDropdown.vue';
+import { formatCurrencyCompact } from '@/utils/format';
 
 // --- Type definitions ---
 type Payment = {
@@ -118,10 +118,12 @@ const lastPayment = ref<Payment | null>(null);
 const lastStudent = ref<Student | null>(null);
 
 const form = useForm({
-  student_id: '',
-  term_id: '',
+  student_id: '' as string | number,
+  term_id: '' as string | number,
   payment_method: 'cash',
   payment_date: new Date().toISOString().split('T')[0],
+  payment_type: '',
+  amount: '',
   payments: [] as Array<{ payment_type: string; amount: string }>,
 });
 
@@ -133,7 +135,7 @@ onMounted(() => {
   if (studentIdParam) {
     const student = props.students.find(s => s.id === Number(studentIdParam));
     if (student) {
-      form.student_id = student.id;
+      form.student_id = String(student.id);
       selectedClassFilter.value = String(student.school_class_id);
       showModal.value = true;
       currentStep.value = 1;
@@ -278,14 +280,27 @@ const canGoToStep3 = computed(() => {
   return form.payments.length > 0 && totalPaymentAmount.value > 0;
 });
 
+// Default fee types to always show
+const DEFAULT_FEE_TYPES = ['school_fees', 'feeding_fees', 'registration_fees', 'others'];
+
 // When student is selected, initialize bulk payments array
 watch(() => form.student_id, (newId) => {
   if (newId && props.activeTerm) {
     form.term_id = props.activeTerm.id;
-    form.payments = feeCardsWithBalance.value.map(card => ({
-      payment_type: card.fee_type,
-      amount: '',
-    }));
+    
+    // Start with fee cards, or fall back to default fee types if none
+    if (feeCardsWithBalance.value.length > 0) {
+      form.payments = feeCardsWithBalance.value.map(card => ({
+        payment_type: card.fee_type,
+        amount: '',
+      }));
+    } else {
+      form.payments = DEFAULT_FEE_TYPES.map(type => ({
+        payment_type: type,
+        amount: '',
+      }));
+    }
+    
     studentSearch.value = '';
   }
 });
@@ -395,10 +410,12 @@ function printReceipt() {
 
 function openWhatsApp() {
   if (!lastPayment.value || !lastStudent.value) return;
+
   const student = lastStudent.value;
   const message = `Payment of GHS ${lastPayment.value.amount} received for ${student.first_name} ${student.last_name} - ${formatFeeType(lastPayment.value.payment_type)} - ${lastPayment.value.term.name}. Receipt: ${lastPayment.value.receipt_number}. Thank you.`;
   const encodedMsg = encodeURIComponent(message);
   const phone = student.parent_phone?.replace(/\D/g, '');
+
   if (phone) {
     window.open(`https://wa.me/${phone}?text=${encodedMsg}`, '_blank');
   } else {
@@ -409,6 +426,7 @@ function openWhatsApp() {
 // Copy SMS Message
 function copySMS() {
   if (!lastPayment.value || !lastStudent.value) return;
+
   const student = lastStudent.value;
   const message = `Payment of GHS ${lastPayment.value.amount} received for ${student.first_name} ${student.last_name} - ${formatFeeType(lastPayment.value.payment_type)} - ${lastPayment.value.term.name}. Receipt: ${lastPayment.value.receipt_number}. Thank you.`;
   navigator.clipboard.writeText(message);
@@ -771,7 +789,7 @@ function clearFilters() {
                   </div>
 
                   <!-- Bulk Payment Table -->
-                  <div v-if="feeCardsWithBalance.length" class="space-y-3">
+                  <div v-if="form.payments.length > 0" class="space-y-3">
                     <label class="block text-xs uppercase font-bold text-gray-500 tracking-wider">Enter Amounts for Each Fee Type *</label>
                     <div class="overflow-x-auto border border-amber-100 rounded-xl shadow-sm">
                       <table class="w-full text-sm">
@@ -910,9 +928,9 @@ function clearFilters() {
                     <div class="overflow-x-auto">
                       <table class="w-full text-xs">
                         <tbody class="divide-y divide-gray-200">
-                          <tr v-for="payment in form.payments.filter(p => parseFloat(p.amount) > 0)" :key="payment.payment_type">
+                          <tr v-for="payment in form.payments.filter(p => parseFloat(p.amount || '0') > 0)" :key="payment.payment_type">
                             <td class="py-2 text-gray-600">{{ formatFeeType(payment.payment_type) }}</td>
-                            <td class="py-2 text-right font-bold text-gray-900">GHS {{ parseFloat(payment.amount || 0).toFixed(2) }}</td>
+                            <td class="py-2 text-right font-bold text-gray-900">GHS {{ parseFloat(payment.amount || '0').toFixed(2) }}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -1061,7 +1079,7 @@ function clearFilters() {
                           <span class="text-[9px] text-gray-500 block">Term: {{ lastPayment?.term?.name }}</span>
                         </td>
                         <td class="py-2 px-2 text-right font-bold text-gray-900">
-                          GHS {{ parseFloat(lastPayment?.amount || 0).toFixed(2) }}
+                          GHS {{ (lastPayment?.amount || 0).toFixed(2) }}
                         </td>
                       </tr>
                     </tbody>
@@ -1072,16 +1090,16 @@ function clearFilters() {
                     <div class="w-48 space-y-1.5 border-t border-gray-100 pt-2 text-[10px]">
                       <div class="flex justify-between">
                         <span class="text-gray-500">Expected:</span>
-                        <span class="text-gray-900 font-medium">GHS {{ parseFloat(lastStudent?.balances?.expected || 0).toFixed(2) }}</span>
+                        <span class="text-gray-900 font-medium">GHS {{ (lastStudent?.balances?.expected || 0).toFixed(2) }}</span>
                       </div>
                       <div class="flex justify-between">
                         <span class="text-gray-500">Total Paid:</span>
-                        <span class="text-gray-900 font-medium">GHS {{ parseFloat(lastStudent?.balances?.paid || 0).toFixed(2) }}</span>
+                        <span class="text-gray-900 font-medium">GHS {{ (lastStudent?.balances?.paid || 0).toFixed(2) }}</span>
                       </div>
                       <div class="flex justify-between bg-amber-50/50 p-1.5 rounded font-bold">
                         <span class="text-amber-800">Remaining:</span>
                         <span :class="[ (lastStudent?.balances?.balance || 0) > 0 ? 'text-red-600' : 'text-green-600' ]">
-                          GHS {{ parseFloat(lastStudent?.balances?.balance || 0).toFixed(2) }}
+                          GHS {{ (lastStudent?.balances?.balance || 0).toFixed(2) }}
                         </span>
                       </div>
                     </div>
@@ -1187,7 +1205,7 @@ function clearFilters() {
               <span class="text-xs text-gray-500 block mt-0.5 font-normal">Academic Term: {{ lastPayment?.term?.name }}</span>
             </td>
             <td class="py-4 px-4 text-right font-bold text-gray-900">
-              GHS {{ parseFloat(lastPayment?.amount || 0).toFixed(2) }}
+              GHS {{ (Number(lastPayment?.amount) || 0).toFixed(2) }}
             </td>
           </tr>
         </tbody>
@@ -1198,16 +1216,16 @@ function clearFilters() {
         <div class="w-80">
           <div class="flex justify-between py-2 border-b border-gray-200 text-sm">
             <span class="text-gray-500 font-medium">Expected for Term:</span>
-            <span class="text-gray-900 font-semibold">GHS {{ parseFloat(lastStudent?.balances?.expected || 0).toFixed(2) }}</span>
+            <span class="text-gray-900 font-semibold">GHS {{ (Number(lastStudent?.balances?.expected) || 0).toFixed(2) }}</span>
           </div>
           <div class="flex justify-between py-2 border-b border-gray-200 text-sm">
             <span class="text-gray-500 font-medium">Total Paid to Date:</span>
-            <span class="text-gray-900 font-semibold">GHS {{ parseFloat(lastStudent?.balances?.paid || 0).toFixed(2) }}</span>
+            <span class="text-gray-900 font-semibold">GHS {{ (Number(lastStudent?.balances?.paid) || 0).toFixed(2) }}</span>
           </div>
           <div class="flex justify-between py-3 bg-amber-50/50 px-3 rounded-lg mt-2 text-base font-bold">
             <span class="text-amber-800">Remaining Balance:</span>
             <span :class="[ (lastStudent?.balances?.balance || 0) > 0 ? 'text-red-600' : 'text-green-600' ]">
-              GHS {{ parseFloat(lastStudent?.balances?.balance || 0).toFixed(2) }}
+              GHS {{ (Number(lastStudent?.balances?.balance) || 0).toFixed(2) }}
             </span>
           </div>
         </div>

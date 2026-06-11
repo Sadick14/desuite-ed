@@ -22,6 +22,11 @@ class Student extends Model
         'admission_date',
         'photo',
         'active',
+        'medical_notes',
+        'allergies',
+        'emergency_contact_name',
+        'emergency_contact_phone',
+        'emergency_contact_relationship',
     ];
 
     public function class()

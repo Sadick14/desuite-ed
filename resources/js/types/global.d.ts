@@ -19,6 +19,12 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             sidebarOpen: boolean;
+            routes: Record<string, string>;
+            flash?: {
+                success?: string;
+                error?: string;
+                [key: string]: unknown;
+            };
             [key: string]: unknown;
         };
     }
@@ -29,5 +35,14 @@ declare module 'vue' {
         $inertia: typeof Router;
         $page: Page;
         $headManager: ReturnType<typeof createHeadManager>;
+        route: (name: string, params?: Record<string, string | number | boolean | object | null | undefined>) => string;
     }
+}
+
+interface RouteParams {
+    [key: string]: string | number | boolean | object | null | undefined;
+}
+
+declare global {
+    function route(name: string, params?: RouteParams): string;
 }

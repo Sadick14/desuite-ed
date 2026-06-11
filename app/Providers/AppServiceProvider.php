@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-
 use App\Models\AcademicYear;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
@@ -17,9 +16,9 @@ use App\Observers\StudentEnrollmentObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Validation\Rules\Password;
-use Illuminate\Support\Facades\URL; // <-- Make sure to import this
+use Illuminate\Validation\Rules\Password; // <-- Make sure to import this
 
 class AppServiceProvider extends ServiceProvider
 {

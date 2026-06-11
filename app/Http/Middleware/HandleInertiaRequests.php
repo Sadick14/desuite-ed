@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\TeamPermission;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -36,16 +37,40 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $permissions = [];
+
+        if ($user && $user->role) {
+            $permissions = array_map(fn ($perm) => $perm->value, $user->role->permissions());
+        }
 
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
                 'user' => $user,
+                'role' => $user?->role?->value,
+                'permissions' => $permissions,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
             'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
+            'routes' => $this->getRoutes(),
+        ];
+    }
+
+    protected function getRoutes(): array
+    {
+        return [
+            'attendance.index' => route('attendance.index'),
+            'attendance.student' => route('attendance.student', ['student' => '{student}']),
+            'students.index' => route('students.index'),
+            'students.show' => route('students.show', ['student' => '{student}']),
+            'payments.index' => route('payments.index'),
+            'reports.index' => route('reports.index'),
+            'grades.index' => route('grades.index'),
+            'courses.index' => route('courses.index'),
+            'exams.index' => route('exams.index'),
+            'exam-templates.index' => route('exam-templates.index'),
         ];
     }
 }

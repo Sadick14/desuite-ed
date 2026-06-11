@@ -19,28 +19,35 @@ const recordQuickPayment = (studentId: number) => {
   router.get('/payments', { student_id: studentId });
 };
 
-defineProps<{
+const props = defineProps<{
   students: {
     data: any[];
     links: any[];
   };
   classes: any[];
+  selectedClassId?: number | null;
 }>();
 
 // UI STATE
 const showModal = ref(false);
 const editingStudent = ref<any | null>(null);
 const search = ref('');
+const selectedClassId = ref(props.selectedClassId);
+
+const handleFiltersChange = () => {
+  router.get('/students', { 
+    search: search.value,
+    class_id: selectedClassId.value
+  }, {
+    preserveState: true,
+    replace: true,
+  });
+};
 
 // Debounced search
 watchDebounced(
   search,
-  () => {
-    router.get('/students', { search: search.value }, {
-      preserveState: true,
-      replace: true,
-    });
-  },
+  handleFiltersChange,
   { debounce: 300 }
 );
 
@@ -112,21 +119,33 @@ const cleanLabel = (label: string) => {
         </div>
       </div>
 
-      <!-- SEARCH BAR SECTION -->
-      <div class="relative max-w-md shadow-sm rounded-lg">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search class="h-4 w-4 text-gray-400" />
+      <!-- SEARCH & FILTERS SECTION -->
+      <div class="flex flex-col sm:flex-row gap-4">
+        <div class="relative flex-1 shadow-sm rounded-lg">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search class="h-4 w-4 text-gray-400" />
+          </div>
+          <input
+            v-model="search"
+            type="text"
+            placeholder="Search by name, ID, parent, or phone..."
+            class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-white/80 backdrop-blur-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+          />
+          <div v-if="search" class="absolute inset-y-0 right-0 pr-3 flex items-center">
+            <button @click="search = ''" class="text-gray-400 hover:text-gray-600 transition">
+              <X class="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        <input
-          v-model="search"
-          type="text"
-          placeholder="Search by name, ID, parent, or phone..."
-          class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-white/80 backdrop-blur-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
-        />
-        <div v-if="search" class="absolute inset-y-0 right-0 pr-3 flex items-center">
-          <button @click="search = ''" class="text-gray-400 hover:text-gray-600 transition">
-            <X class="h-4 w-4" />
-          </button>
+        <div class="sm:w-64">
+          <select 
+            v-model="selectedClassId" 
+            @change="handleFiltersChange"
+            class="block w-full px-3 py-2 border border-gray-300 rounded-lg bg-white/80 backdrop-blur-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+          >
+            <option :value="null">All Classes</option>
+            <option v-for="cls in classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
+          </select>
         </div>
       </div>
 

@@ -22,10 +22,14 @@ class StudentController extends Controller
                         ->orWhere('parent_name', 'like', "%{$search}%")
                         ->orWhere('parent_phone', 'like', "%{$search}%");
                 })
+                ->when($request->class_id, function ($q, $classId) {
+                    $q->where('school_class_id', $classId);
+                })
                 ->latest()
                 ->paginate(10),
 
             'classes' => SchoolClass::all(),
+            'selectedClassId' => $request->class_id,
         ]);
     }
 
@@ -41,6 +45,11 @@ class StudentController extends Controller
             'parent_phone' => ['required'],
             'address' => ['nullable'],
             'admission_date' => ['required', 'date'],
+            'medical_notes' => ['nullable', 'string'],
+            'allergies' => ['nullable', 'string'],
+            'emergency_contact_name' => ['nullable', 'string'],
+            'emergency_contact_phone' => ['nullable', 'string'],
+            'emergency_contact_relationship' => ['nullable', 'string'],
         ]);
 
         $data['student_id'] = Student::generateStudentId();
@@ -62,6 +71,11 @@ class StudentController extends Controller
             'parent_phone' => ['required', 'string'],
             'address' => ['nullable', 'string'],
             'admission_date' => ['required', 'date'],
+            'medical_notes' => ['nullable', 'string'],
+            'allergies' => ['nullable', 'string'],
+            'emergency_contact_name' => ['nullable', 'string'],
+            'emergency_contact_phone' => ['nullable', 'string'],
+            'emergency_contact_relationship' => ['nullable', 'string'],
         ]);
 
         $student->update($data);
