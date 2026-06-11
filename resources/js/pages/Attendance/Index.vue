@@ -158,8 +158,8 @@ const handleTermChange = () => {
                     
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">Class</label>
-                        <select v-model="form.school_class_id" @change="handleClassChange" class="w-full border border-amber-200 rounded-xl px-3 py-2.5 text-sm">
-                            <option value="" disabled>Select Class</option>
+                        <select v-model.number="form.school_class_id" @change="handleClassChange" class="w-full border border-amber-200 rounded-xl px-3 py-2.5 text-sm">
+                            <option :value="null" disabled>Select Class</option>
                             <option v-for="cls in classes" :key="cls.id" :value="cls.id">
                                 {{ cls.name }}
                             </option>
