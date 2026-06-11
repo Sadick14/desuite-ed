@@ -62,9 +62,7 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             'attendance.index' => route('attendance.index'),
-            'attendance.student' => route('attendance.student', ['student' => '{student}']),
             'students.index' => route('students.index'),
-            'students.show' => route('students.show', ['student' => '{student}']),
             'payments.index' => route('payments.index'),
             'reports.index' => route('reports.index'),
             'grades.index' => route('grades.index'),

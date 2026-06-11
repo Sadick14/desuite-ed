@@ -8,12 +8,26 @@ function resolveRoute(name: string, params?: RouteParams | any): string {
     const page = usePage();
     const routes = (page.props as any)?.routes || {};
 
-    if (!routes[name]) {
+    // Handle routes with parameters that aren't in the routes object
+    // Common patterns for Laravel routes
+    const routePatterns: Record<string, string> = {
+        'attendance.student': '/attendance/students/{student}',
+        'students.show': '/students/{student}',
+        'reports.show': '/reports/{id}',
+        'reports.download': '/reports/{id}/download',
+    };
+
+    let url = routes[name];
+
+    // If route not found in shared routes, try pattern matching
+    if (!url && routePatterns[name]) {
+        url = routePatterns[name];
+    }
+
+    if (!url) {
         console.warn(`Route "${name}" not found`);
         return '/';
     }
-
-    let url = routes[name];
 
     // Replace route parameters
     if (params) {
