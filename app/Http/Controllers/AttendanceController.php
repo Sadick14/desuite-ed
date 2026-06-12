@@ -120,7 +120,13 @@ class AttendanceController extends Controller
             }
         });
 
-        return back()->with('success', 'Attendance records saved successfully');
+        $attendanceRecords = Attendance::where('attendance_date', $data['attendance_date'])
+            ->where('school_class_id', $data['class_id'])
+            ->with('student', 'schoolClass', 'term')
+            ->get();
+
+        return back()->with('success', 'Attendance records saved successfully')
+            ->with('attendanceRecords', $attendanceRecords);
     }
 
     public function history(Request $request)
