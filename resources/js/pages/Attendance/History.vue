@@ -185,11 +185,11 @@ const getStatusBadgeClass = (status: string) => {
               <tr v-for="record in props.attendance.data" :key="record.id" class="hover:bg-blue-50/30 transition">
                 <td class="px-6 py-4">
                   <div>
-                    <p class="font-medium text-gray-900">{{ record.student.first_name }} {{ record.student.last_name }}</p>
-                    <p class="text-xs text-gray-500">{{ record.student.student_id }}</p>
+                    <p class="font-medium text-gray-900">{{ record.student?.first_name }} {{ record.student?.last_name }}</p>
+                    <p class="text-xs text-gray-500">{{ record.student?.student_id }}</p>
                   </div>
                 </td>
-                <td class="px-6 py-4 text-gray-600">{{ record.schoolClass.name }}</td>
+                <td class="px-6 py-4 text-gray-600">{{ record.schoolClass?.name || '-' }}</td>
                 <td class="px-6 py-4 text-gray-600">{{ formatDate(record.attendance_date) }}</td>
                 <td class="px-6 py-4">
                   <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border', getStatusBadgeClass(record.status)]">
