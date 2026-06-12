@@ -4,9 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\SchoolClass;
-use App\Models\Student;
 use App\Models\Term;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -103,12 +101,12 @@ class AttendanceController extends Controller
                 Attendance::updateOrCreate(
                     [
                         'student_id' => $attendance['student_id'],
-                        'school_class_id' => $data['class_id'],
                         'attendance_date' => $data['attendance_date'],
-                        'term_id' => $activeTerm->id,
                     ],
                     [
+                        'school_class_id' => $data['class_id'],
                         'academic_year_id' => $academicYear->id,
+                        'term_id' => $activeTerm->id,
                         'status' => $attendance['status'],
                         'notes' => $attendance['notes'] ?? null,
                     ]
