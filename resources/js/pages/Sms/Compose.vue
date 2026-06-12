@@ -29,6 +29,7 @@ const uniqueClasses = computed(() => {
             classes.set(student.class.id, student.class);
         }
     });
+
     return Array.from(classes.values()).sort((a: any, b: any) => a.name.localeCompare(b.name));
 });
 
@@ -57,6 +58,7 @@ const isStudentSelected = (studentId: number) => {
 
 const toggleStudent = (student: any) => {
     const index = form.student_ids.indexOf(student.id);
+
     if (index > -1) {
         form.student_ids.splice(index, 1);
     } else {
@@ -66,6 +68,7 @@ const toggleStudent = (student: any) => {
 
 const toggleSelectAll = () => {
     selectAll.value = !selectAll.value;
+
     if (selectAll.value) {
         form.student_ids = filteredStudents.value.map((s: any) => s.id);
     } else {
@@ -79,6 +82,7 @@ const selectedStudents = computed(() => {
 
 watch(selectedTemplate, (templateSlug) => {
     const template = props.templates.find((t: any) => t.slug === templateSlug);
+
     if (template) {
         form.message = template.message;
         form.type = template.type;
@@ -97,11 +101,13 @@ const submit = () => {
 
     if (form.recipients.length === 0) {
         alert('Please select at least one recipient!');
+
         return;
     }
 
     if (!form.message.trim()) {
         alert('Please enter a message!');
+
         return;
     }
 

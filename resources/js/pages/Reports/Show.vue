@@ -1,195 +1,174 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { FileText, Download, ChevronLeft, CheckCircle2, XCircle } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { ArrowLeft, Download } from 'lucide-vue-next';
 
 const props = defineProps<{
-    student: any;
-    terms: any[];
-    academicYears: any[];
-    grades: any[];
-    selectedTermId: number | null;
-    selectedAcademicYearId: number | null;
-    summary: any;
+  student: any;
+  terms: any[];
+  academicYears: any[];
+  grades: any[];
+  selectedTermId: number | null;
+  selectedAcademicYearId: number | null;
+  summary: any;
 }>();
 
-const selectedTermId = ref(props.selectedTermId);
-const selectedAcademicYearId = ref(props.selectedAcademicYearId);
+function goBack() {
+  router.visit('/reports');
+}
 
-const handleFilterChange = () => {
-    window.location.href = route('reports.show', {
-        student: props.student,
-        term_id: selectedTermId.value,
-        academic_year_id: selectedAcademicYearId.value,
-    });
-};
+function downloadReport() {
+  const params = new URLSearchParams();
 
-const downloadReport = () => {
-    window.location.href = route('reports.download', {
-        student: props.student,
-        term_id: selectedTermId.value,
-        academic_year_id: selectedAcademicYearId.value,
-    });
-};
+  if (props.selectedTermId) {
+params.append('term_id', String(props.selectedTermId));
+}
+
+  window.location.href = `/reports/students/${props.student.id}/download?${params.toString()}`;
+}
+
+function getGradeColor(finalScore: number | null) {
+  if (!finalScore) {
+return 'bg-gray-50';
+}
+
+  if (finalScore >= 80) {
+return 'bg-green-50';
+}
+
+  if (finalScore >= 60) {
+return 'bg-blue-50';
+}
+
+  if (finalScore >= 50) {
+return 'bg-yellow-50';
+}
+
+  return 'bg-red-50';
+}
 </script>
 
 <template>
-    <Head :title="`Report - ${student.first_name} ${student.last_name}`" />
-    
-    <div class="min-h-screen bg-gradient-to-b from-amber-50 via-white to-amber-50 text-gray-900">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-            
-            <div class="flex items-center gap-3 border-b border-amber-100/60 pb-5">
-                <Link href="/reports" class="p-2 bg-white border border-amber-200 rounded-lg hover:bg-amber-50">
-                    <ChevronLeft class="w-4 h-4 text-gray-700" />
-                </Link>
-                <div class="flex-1">
-                    <h1 class="text-2xl font-bold text-gray-900">Report Card</h1>
-                    <p class="text-gray-500">{{ student.first_name }} {{ student.last_name }}</p>
-                </div>
-                <button 
-                    @click="downloadReport" 
-                    class="flex items-center gap-2 px-4 py-2.5 bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold text-sm shadow-sm transition"
-                >
-                    <Download class="w-4 h-4" />
-                    Download PDF
-                </button>
-            </div>
-            
-            <div class="bg-white rounded-2xl border border-amber-100 shadow-xl shadow-amber-900/[0.01] p-5">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-1.5">Academic Year</label>
-                        <select 
-                            v-model="selectedAcademicYearId" 
-                            @change="handleFilterChange" 
-                            class="w-full border border-amber-200 rounded-xl px-3 py-2.5 text-sm"
-                        >
-                            <option value="">All Years</option>
-                            <option v-for="year in academicYears" :key="year.id" :value="year.id">
-                                {{ year.name }}
-                            </option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-1.5">Term</label>
-                        <select 
-                            v-model="selectedTermId" 
-                            @change="handleFilterChange" 
-                            class="w-full border border-amber-200 rounded-xl px-3 py-2.5 text-sm"
-                        >
-                            <option value="">All Terms</option>
-                            <option v-for="term in terms" :key="term.id" :value="term.id">
-                                {{ term.name }}
-                            </option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white rounded-2xl border border-amber-100 shadow-xl shadow-amber-900/[0.01] p-6">
-                    <h3 class="font-bold text-gray-900 mb-4">Student Info</h3>
-                    <div class="space-y-3 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Name</span>
-                            <span class="font-medium">{{ student.first_name }} {{ student.last_name }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Student ID</span>
-                            <span class="font-medium">{{ student.student_id }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Class</span>
-                            <span class="font-medium">{{ student.schoolClass?.name || '-' }}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-amber-50 rounded-2xl border border-amber-100 p-6">
-                    <h3 class="font-bold text-gray-900 mb-4">Summary</h3>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div class="text-center">
-                            <p class="text-2xl font-black text-amber-700">{{ summary.percentage }}%</p>
-                            <p class="text-gray-600">Percentage</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-2xl font-black text-gray-900">{{ summary.averageScore }}</p>
-                            <p class="text-gray-600">Average</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-2xl font-black text-green-700">{{ summary.passedSubjects }}</p>
-                            <p class="text-gray-600">Passed</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-2xl font-black text-red-700">{{ summary.failedSubjects }}</p>
-                            <p class="text-gray-600">Failed</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-2xl border border-amber-100 shadow-xl shadow-amber-900/[0.01] overflow-hidden">
-                <div class="bg-amber-50/70 px-6 py-4 border-b border-amber-100">
-                    <h3 class="font-bold text-gray-900">Grades</h3>
-                </div>
-                <div v-if="grades.length > 0" class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-amber-100">
-                        <thead class="bg-amber-50/50">
-                            <tr>
-                                <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Course</th>
-                                <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Exam</th>
-                                <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Score</th>
-                                <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Percentage</th>
-                                <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Grade</th>
-                                <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Remarks</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-amber-100">
-                            <tr v-for="grade in grades" :key="grade.id" class="hover:bg-amber-50/30">
-                                <td class="px-6 py-4 text-sm font-medium">{{ grade.exam.course.name }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-600">{{ grade.exam.name }}</td>
-                                <td class="px-6 py-4 text-sm font-bold">{{ grade.score }} / {{ grade.exam.max_score }}</td>
-                                <td class="px-6 py-4 text-sm font-bold text-amber-700">{{ grade.percentage }}%</td>
-                                <td class="px-6 py-4">
-                                    <span 
-                                        :class="[
-                                            'px-2 py-1 rounded text-xs font-bold',
-                                            grade.letter_grade === 'A+' || grade.letter_grade === 'A' ? 'bg-lime-100 text-lime-800' :
-                                            grade.letter_grade === 'B' ? 'bg-emerald-100 text-emerald-800' :
-                                            grade.letter_grade === 'C' ? 'bg-yellow-100 text-yellow-800' :
-                                            grade.letter_grade === 'D' ? 'bg-orange-100 text-orange-800' :
-                                            'bg-red-100 text-red-800'
-                                        ]"
-                                    >
-                                        {{ grade.letter_grade }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span 
-                                        :class="[
-                                            'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold',
-                                            grade.is_passing 
-                                                ? 'bg-green-100 text-green-800 border border-green-200' 
-                                                : 'bg-red-100 text-red-800 border border-red-200'
-                                        ]"
-                                    >
-                                        <CheckCircle2 v-if="grade.is_passing" class="w-3 h-3" />
-                                        <XCircle v-else class="w-3 h-3" />
-                                        {{ grade.is_passing ? 'PASS' : 'FAIL' }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-600">{{ grade.remarks || '-' }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div v-else class="px-6 py-12 text-center">
-                    <FileText class="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p class="text-gray-500">No grades available for selected period</p>
-                </div>
-            </div>
+  <Head :title="`${student.first_name} ${student.last_name} - Report Card`" />
+
+  <div class="min-h-screen bg-gradient-to-b from-blue-50 via-white to-blue-50">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+      <!-- Header -->
+      <div class="flex items-center gap-3 mb-6">
+        <button @click="goBack" class="p-2 hover:bg-gray-100 rounded-lg transition">
+          <ArrowLeft class="w-5 h-5 text-gray-600" />
+        </button>
+        <div class="flex-1">
+          <h1 class="text-3xl font-bold text-gray-900">
+            {{ student.first_name }} {{ student.last_name }}
+          </h1>
+          <p class="text-sm text-gray-600 mt-1">Admission #: {{ student.admission_number }}</p>
         </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-lg border border-blue-100 p-4">
+          <p class="text-xs text-gray-500 uppercase font-semibold">Total Courses</p>
+          <p class="text-2xl font-bold text-gray-900 mt-1">{{ summary.totalSubjects }}</p>
+        </div>
+        <div class="bg-white rounded-lg border border-green-100 p-4">
+          <p class="text-xs text-gray-500 uppercase font-semibold">Passed</p>
+          <p class="text-2xl font-bold text-green-600 mt-1">{{ summary.passedSubjects }}</p>
+        </div>
+        <div class="bg-white rounded-lg border border-red-100 p-4">
+          <p class="text-xs text-gray-500 uppercase font-semibold">Failed</p>
+          <p class="text-2xl font-bold text-red-600 mt-1">{{ summary.failedSubjects }}</p>
+        </div>
+        <div class="bg-white rounded-lg border border-purple-100 p-4">
+          <p class="text-xs text-gray-500 uppercase font-semibold">Average</p>
+          <p class="text-2xl font-bold text-purple-600 mt-1">{{ summary.averageScore.toFixed(1) }}</p>
+        </div>
+      </div>
+
+      <!-- Grades Table -->
+      <div class="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-blue-100">
+            <thead class="bg-blue-50/70">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Course</th>
+                <th class="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">CA</th>
+                <th class="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">Exam</th>
+                <th class="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">Final</th>
+                <th class="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">Grade</th>
+                <th class="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-blue-50">
+              <tr v-for="mark in grades" :key="mark.id" :class="getGradeColor(mark.final_score) + ' transition-colors'">
+                <td class="px-6 py-4 font-medium text-gray-900">
+                  {{ mark.course?.name || 'N/A' }}
+                </td>
+                <td class="px-6 py-4 text-center text-sm text-gray-900 font-semibold">
+                  {{ mark.ca_total ? mark.ca_total.toFixed(1) : '-' }}
+                </td>
+                <td class="px-6 py-4 text-center text-sm text-gray-900 font-semibold">
+                  {{ mark.exam_score ? mark.exam_score.toFixed(1) : '-' }}
+                </td>
+                <td class="px-6 py-4 text-center text-sm text-gray-900 font-bold">
+                  {{ mark.final_score ? mark.final_score.toFixed(1) : '-' }}
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-900">
+                    {{ mark.letter_grade || '-' }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <span
+                    :class="[
+                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold',
+                      (mark.final_score ?? 0) >= 50
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    ]"
+                  >
+                    {{ (mark.final_score ?? 0) >= 50 ? 'Pass' : 'Fail' }}
+                  </span>
+                </td>
+              </tr>
+              <tr v-if="grades.length === 0">
+                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                  No grades available for the selected term.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Summary Section -->
+      <div class="bg-white rounded-2xl border border-blue-100 p-6 shadow-sm">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Overall Summary</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div>
+            <p class="text-sm text-gray-600">Total Score</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">{{ summary.totalScore.toFixed(1) }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Average</p>
+            <p class="text-2xl font-bold text-blue-600 mt-1">{{ summary.percentage.toFixed(1) }}%</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Pass Rate</p>
+            <p class="text-2xl font-bold text-green-600 mt-1">
+              {{ summary.totalSubjects > 0 ? Math.round((summary.passedSubjects / summary.totalSubjects) * 100) : 0 }}%
+            </p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Remark</p>
+            <p class="text-lg font-bold text-purple-600 mt-1">
+              {{ summary.percentage >= 80 ? 'Excellent' : summary.percentage >= 60 ? 'Good' : summary.percentage >= 50 ? 'Fair' : 'Poor' }}
+            </p>
+          </div>
+        </div>
+      </div>
+
     </div>
+  </div>
 </template>

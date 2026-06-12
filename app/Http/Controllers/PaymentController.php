@@ -8,6 +8,7 @@ use App\Models\School;
 use App\Models\Student;
 use App\Models\Term;
 use App\Services\BalanceService;
+use App\Services\FeedingFeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,8 +22,14 @@ class PaymentController extends Controller
         $activeTerm = Term::where('is_active', true)->with('academicYear')->first();
         $students = Student::with('class')->get();
 
+        // Build feeding fee data for all students
+        $feedingFeeData = [];
         if ($activeTerm) {
             $students = BalanceService::attachBalances($students, $activeTerm);
+
+            foreach ($students as $student) {
+                $feedingFeeData[$student->id] = FeedingFeeService::getStudentFeedingBalance($student, $activeTerm);
+            }
         }
 
         return Inertia::render('Payments/Index', [
@@ -32,6 +39,7 @@ class PaymentController extends Controller
             'feeStructures' => FeeStructure::with('term')->get(),
             'activeTerm' => $activeTerm,
             'school' => School::first(),
+            'feedingFeeData' => $feedingFeeData,
         ]);
     }
 
@@ -49,16 +57,36 @@ class PaymentController extends Controller
         $student = Student::findOrFail($data['student_id']);
         $term = Term::findOrFail($data['term_id']);
 
-        if (! BalanceService::canPay($student, $term, $data['payment_type'], $data['amount'])) {
-            return back()->withErrors(['amount' => "Payment exceeds remaining balance for {$data['payment_type']}"]);
+        // Handle feeding fees differently (attendance-based)
+        if ($data['payment_type'] === 'feeding_fees') {
+            $payment = DB::transaction(function () use ($data) {
+                $data['receipt_number'] = Payment::generateReceiptNumber();
+                $data['user_id'] = Auth::id();
+
+                $payment = Payment::create($data);
+
+                // Allocate feeding fee payment to weekly balances
+                FeedingFeeService::recordFeedingFeePayment(
+                    Student::find($data['student_id']),
+                    Term::find($data['term_id']),
+                    $data['amount']
+                );
+
+                return $payment;
+            });
+        } else {
+            // Regular fees
+            if (! BalanceService::canPay($student, $term, $data['payment_type'], $data['amount'])) {
+                return back()->withErrors(['amount' => "Payment exceeds remaining balance for {$data['payment_type']}"]);
+            }
+
+            $payment = DB::transaction(function () use ($data) {
+                $data['receipt_number'] = Payment::generateReceiptNumber();
+                $data['user_id'] = Auth::id();
+
+                return Payment::create($data);
+            });
         }
-
-        $payment = DB::transaction(function () use ($data) {
-            $data['receipt_number'] = Payment::generateReceiptNumber();
-            $data['user_id'] = Auth::id();
-
-            return Payment::create($data);
-        });
 
         return back()->with('payment', $payment->load('term'));
     }
@@ -78,7 +106,7 @@ class PaymentController extends Controller
         $student = Student::findOrFail($data['student_id']);
         $term = Term::findOrFail($data['term_id']);
 
-        $lastPayment = DB::transaction(function () use ($data) {
+        $lastPayment = DB::transaction(function () use ($data, $student, $term) {
             $payments = [];
 
             foreach ($data['payments'] as $paymentData) {
@@ -87,7 +115,7 @@ class PaymentController extends Controller
                     continue;
                 }
 
-                $payments[] = Payment::create([
+                $payment = Payment::create([
                     'student_id' => $data['student_id'],
                     'term_id' => $data['term_id'],
                     'amount' => $amount,
@@ -97,10 +125,20 @@ class PaymentController extends Controller
                     'receipt_number' => Payment::generateReceiptNumber(),
                     'user_id' => Auth::id(),
                 ]);
+
+                if ($paymentData['payment_type'] === 'feeding_fees') {
+                    FeedingFeeService::recordFeedingFeePayment($student, $term, $amount);
+                }
+
+                $payments[] = $payment;
             }
 
-            return end($payments);
+            return count($payments) > 0 ? end($payments) : null;
         });
+
+        if (!$lastPayment) {
+            return back()->withErrors(['amount' => 'No valid payments were processed']);
+        }
 
         return back()->with('payment', $lastPayment->load('term'));
     }

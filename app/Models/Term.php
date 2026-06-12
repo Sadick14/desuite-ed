@@ -17,6 +17,12 @@ class Term extends Model
         'is_active',
     ];
 
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'is_active' => 'boolean',
+    ];
+
     public function academicYear()
     {
         return $this->belongsTo(AcademicYear::class);
@@ -30,5 +36,20 @@ class Term extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->end_date < today();
+    }
+
+    public function isActive(): bool
+    {
+        return $this->is_active;
+    }
+
+    public function isCurrently(): bool
+    {
+        return $this->start_date <= today() && $this->end_date >= today();
     }
 }

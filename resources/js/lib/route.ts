@@ -11,10 +11,16 @@ function resolveRoute(name: string, params?: RouteParams | any): string {
     // Handle routes with parameters that aren't in the routes object
     // Common patterns for Laravel routes
     const routePatterns: Record<string, string> = {
+        'attendance.index': '/attendance',
+        'attendance.store': '/attendance/store',
         'attendance.student': '/attendance/students/{student}',
         'students.show': '/students/{student}',
         'reports.show': '/reports/{id}',
         'reports.download': '/reports/{id}/download',
+        'payments.index': '/payments',
+        'payments.store': '/payments',
+        'payments.storeBulk': '/payments/bulk',
+        'payments.destroy': '/payments/{payment}',
     };
 
     let url = routes[name];
@@ -26,6 +32,7 @@ function resolveRoute(name: string, params?: RouteParams | any): string {
 
     if (!url) {
         console.warn(`Route "${name}" not found`);
+
         return '/';
     }
 
@@ -34,10 +41,12 @@ function resolveRoute(name: string, params?: RouteParams | any): string {
         if (typeof params === 'object') {
             Object.keys(params).forEach((key) => {
                 const value = params[key];
+
                 // Skip null or undefined values
                 if (value === null || value === undefined) {
                     return;
                 }
+
                 // Handle model objects - use their ID if available
                 const paramValue = typeof value === 'object' && value !== null && 'id' in value
                     ? (value as any).id

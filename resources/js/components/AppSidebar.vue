@@ -16,23 +16,24 @@ import {
   Clock,
   ArrowRight,
   MessageSquare,
-  Calendar,
   FileText,
   FileCheck2,
   Scale,
   Percent,
   FilePlus2,
-} from '@lucide/vue';
+  AlertCircle,
+  TrendingUp,
+} from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
+import AppLogo from '@/components/AppLogo.vue';
+import NavFooter from '@/components/NavFooter.vue';
+import NavUser from '@/components/NavUser.vue';
 import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { computed, ref } from 'vue';
-import AppLogo from '@/components/AppLogo.vue';
-import NavFooter from '@/components/NavFooter.vue';
-import NavUser from '@/components/NavUser.vue';
 import {
     Sidebar,
     SidebarContent,
@@ -50,6 +51,7 @@ const dashboardUrl = computed(() => '/dashboard');
 
 const hasPermission = (perm: string) => {
   const permissions = page.props.auth?.permissions || [];
+
   return permissions.includes(perm);
 };
 
@@ -62,7 +64,6 @@ const navigationGroups = computed(() => {
         { title: 'Dashboard', href: dashboardUrl.value, icon: LayoutGrid },
         { title: 'Users', href: '/users', icon: Users, permission: 'team:update' },
         { title: 'Students', href: '/students', icon: GraduationCap, permission: 'students:view' },
-        { title: 'Attendance', href: '/attendance', icon: Calendar, permission: 'attendance:view' },
         { title: 'Payments', href: '/payments', icon: CreditCard, permission: 'payments:view' },
         { title: 'Expenses', href: '/expenses', icon: Wallet, permission: 'expenses:view' },
         { title: 'SMS', href: '/sms', icon: MessageSquare, permission: 'sms:view' },
@@ -73,9 +74,12 @@ const navigationGroups = computed(() => {
       icon: BookOpen,
       items: [
         { title: 'Courses', href: '/courses', icon: BookOpen, permission: 'courses:view' },
-        { title: 'Exams', href: '/exams', icon: FileText, permission: 'exams:view' },
-        { title: 'Grades', href: '/grades', icon: FileCheck2, permission: 'grades:view' },
-        { title: 'Report Cards', href: '/reports', icon: FileCheck2, permission: 'reports:view' },
+        { title: 'Student Marks', href: '/student-marks', icon: FileCheck2, permission: 'students:view' },
+        { title: 'Attendance', href: '/attendance', icon: BarChart3, permission: 'students:view' },
+        { title: 'Attendance History', href: '/attendance/history', icon: FileText, permission: 'students:view' },
+        { title: 'Attendance Report', href: '/attendance/report', icon: BarChart3, permission: 'students:view' },
+        { title: 'Attendance Analytics', href: '/attendance/analytics', icon: TrendingUp, permission: 'students:view' },
+        { title: 'Reports', href: '/reports', icon: FileText, permission: 'reports:view' },
       ],
     },
     {
@@ -83,6 +87,9 @@ const navigationGroups = computed(() => {
       icon: CreditCard,
       items: [
         { title: 'Analytics', href: '/analytics', icon: BarChart3, permission: 'payments:view' },
+        { title: 'Collections', href: '/finance/collections', icon: AlertCircle, permission: 'payments:view' },
+        { title: 'Payment History', href: '/finance/payment-history', icon: Receipt, permission: 'payments:view' },
+        { title: 'Year-End Report', href: '/finance/year-end-report', icon: TrendingUp, permission: 'payments:view' },
         { title: 'Fee Structures', href: '/fee-structures', icon: Receipt, permission: 'payments:manage' },
         { title: 'Expense Categories', href: '/expense-categories', icon: FolderGit2, permission: 'expenses:manage' },
       ],
@@ -94,9 +101,8 @@ const navigationGroups = computed(() => {
         { title: 'School Settings', href: '/school', icon: Building2, permission: 'team:update' },
         { title: 'Academic Years', href: '/academic-years', icon: Clock, permission: 'team:update' },
         { title: 'Classes', href: '/classes', icon: GraduationCap, permission: 'students:manage' },
-        { title: 'Terms', href: '/terms', icon: BookOpen, permission: 'team:update' },
         { title: 'Exam Templates', href: '/exam-templates', icon: FilePlus2, permission: 'team:update' },
-        { title: 'Grade Scale Rules', href: '/grade-scale-rules', icon: Scale, permission: 'team:update' },
+        { title: 'Grading Scales', href: '/grading-scales', icon: Scale, permission: 'team:update' },
         { title: 'Assessment Settings', href: '/assessment-settings', icon: Percent, permission: 'team:update' },
         { title: 'Audit Logs', href: '/audit-logs', icon: BookOpen, permission: 'team:update' },
         { title: 'Promotions', href: '/promotions', icon: ArrowRight, permission: 'students:manage' },
@@ -110,7 +116,10 @@ const navigationGroups = computed(() => {
       ...group,
       items: group.items.filter(item => {
         // If no permission specified, show to everyone
-        if (!item.permission) return true;
+        if (!item.permission) {
+return true;
+}
+
         // Otherwise check if user has permission
         return hasPermission(item.permission);
       }),

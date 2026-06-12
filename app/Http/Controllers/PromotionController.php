@@ -6,6 +6,7 @@ use App\Models\AcademicYear;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
+use App\Services\BalanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,15 +19,27 @@ class PromotionController extends Controller
             'to_academic_year_id' => 'required|exists:academic_years,id',
             'new_class_id' => 'required|exists:school_classes,id',
             'status' => 'nullable|in:promoted,retained,transferred,withdrawn',
+            'force' => 'nullable|boolean',
         ]);
 
+        $fromYear = AcademicYear::find($validated['from_academic_year_id']);
         $toYear = AcademicYear::find($validated['to_academic_year_id']);
         $newClass = SchoolClass::find($validated['new_class_id']);
         $status = $validated['status'] ?? 'promoted';
+        $force = $validated['force'] ?? false;
 
         // Verify new class belongs to target academic year
         if ($newClass->academic_year_id !== $toYear->id) {
             return back()->withErrors(['new_class_id' => 'Class must belong to target academic year']);
+        }
+
+        // Check for outstanding fees unless force is true
+        if (! $force && ! BalanceService::canPromoteNextYear($student)) {
+            $yearBalance = BalanceService::outstandingBalanceForYear($student, $fromYear);
+
+            return back()->withErrors([
+                'promotion' => "Cannot promote student: Outstanding fees of {$yearBalance['total_balance']}. Please settle fees or use force option.",
+            ]);
         }
 
         DB::transaction(function () use ($student, $validated, $newClass, $status) {
@@ -62,12 +75,14 @@ class PromotionController extends Controller
             'to_academic_year_id' => 'required|exists:academic_years,id',
             'new_class_id' => 'required|exists:school_classes,id',
             'status' => 'nullable|in:promoted,retained,transferred,withdrawn',
+            'force' => 'nullable|boolean',
         ]);
 
         $fromYear = $class->academicYear;
         $toYear = AcademicYear::find($validated['to_academic_year_id']);
         $newClass = SchoolClass::find($validated['new_class_id']);
         $status = $validated['status'] ?? 'promoted';
+        $force = $validated['force'] ?? false;
 
         // Verify new class belongs to target academic year
         if ($newClass->academic_year_id !== $toYear->id) {
@@ -79,6 +94,29 @@ class PromotionController extends Controller
             'school_class_id' => $class->id,
             'academic_year_id' => $fromYear->id,
         ])->with('student')->get();
+
+        // Check for students with outstanding fees
+        $blockedStudents = [];
+        if (! $force) {
+            foreach ($enrollments as $enrollment) {
+                if (! BalanceService::canPromoteNextYear($enrollment->student)) {
+                    $yearBalance = BalanceService::outstandingBalanceForYear($enrollment->student, $fromYear);
+                    $blockedStudents[] = [
+                        'name' => $enrollment->student->full_name,
+                        'outstanding' => $yearBalance['total_balance'],
+                    ];
+                }
+            }
+        }
+
+        if (! empty($blockedStudents)) {
+            $message = 'Cannot promote: '.count($blockedStudents)." student(s) have outstanding fees:\n";
+            foreach ($blockedStudents as $student) {
+                $message .= "- {$student['name']}: {$student['outstanding']}\n";
+            }
+
+            return back()->withErrors(['promotion' => $message]);
+        }
 
         $count = $enrollments->count();
 
@@ -151,10 +189,36 @@ class PromotionController extends Controller
             'promotions.*.student_id' => 'required|exists:students,id',
             'promotions.*.action' => 'required|in:promote,retain,withdraw,transfer',
             'promotions.*.target_class_id' => 'nullable|exists:school_classes,id',
+            'force' => 'nullable|boolean',
         ]);
 
         $fromYearId = $validated['from_academic_year_id'];
         $toYearId = $validated['to_academic_year_id'];
+        $force = $validated['force'] ?? false;
+        $fromYear = AcademicYear::find($fromYearId);
+
+        // Check for students with outstanding fees
+        $blockedStudents = [];
+        if (! $force) {
+            foreach ($validated['promotions'] as $promo) {
+                if (in_array($promo['action'], ['promote', 'retain'])) {
+                    $student = Student::findOrFail($promo['student_id']);
+                    if (! BalanceService::canPromoteNextYear($student)) {
+                        $yearBalance = BalanceService::outstandingBalanceForYear($student, $fromYear);
+                        $blockedStudents[] = [
+                            'name' => $student->full_name,
+                            'outstanding' => $yearBalance['total_balance'],
+                        ];
+                    }
+                }
+            }
+        }
+
+        if (! empty($blockedStudents)) {
+            $message = 'Cannot process promotions: '.count($blockedStudents).' student(s) have outstanding fees';
+
+            return back()->withErrors(['promotions' => $message]);
+        }
 
         DB::transaction(function () use ($validated, $fromYearId, $toYearId) {
             foreach ($validated['promotions'] as $promo) {

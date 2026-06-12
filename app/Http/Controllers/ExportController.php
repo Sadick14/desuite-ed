@@ -340,7 +340,8 @@ class ExportController extends Controller
         $totalPaid = $payments->sum('amount');
 
         // Calculate expected fees from fee structures
-        $activeYear = AcademicYear::where('is_active', true)->first();
+        $allYears = AcademicYear::latest()->get();
+        $activeYear = $allYears->firstWhere(fn ($y) => $y->isActive());
         $feeBreakdown = collect();
         $totalExpected = 0;
 

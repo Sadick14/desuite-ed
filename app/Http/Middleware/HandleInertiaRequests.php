@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\TeamPermission;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -61,14 +60,16 @@ class HandleInertiaRequests extends Middleware
     protected function getRoutes(): array
     {
         return [
-            'attendance.index' => route('attendance.index'),
             'students.index' => route('students.index'),
             'payments.index' => route('payments.index'),
+            'payments.store' => route('payments.store'),
+            'payments.storeBulk' => route('payments.storeBulk'),
+            'payments.destroy' => route('payments.destroy', ['payment' => 0]),
             'reports.index' => route('reports.index'),
-            'grades.index' => route('grades.index'),
+            'student-marks.index' => route('student-marks.index'),
+            'assessment-settings.index' => route('assessment-settings.index'),
+            'grading-scales.index' => route('grading-scales.index'),
             'courses.index' => route('courses.index'),
-            'exams.index' => route('exams.index'),
-            'exam-templates.index' => route('exam-templates.index'),
         ];
     }
 }

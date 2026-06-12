@@ -11,11 +11,11 @@ class EnrollmentController extends Controller
 {
     public function index()
     {
-        $academicYears = AcademicYear::with(['enrollments.student', 'enrollments.class', 'classes'])->get()->map(function ($year) {
+        $academicYears = AcademicYear::with(['enrollments.student', 'enrollments.class', 'classes'])->latest()->get()->map(function ($year) {
             return [
                 'id' => $year->id,
                 'name' => $year->name,
-                'is_active' => $year->is_active,
+                'is_active' => $year->isActive(),
                 'classes' => $year->classes->map(fn ($cls) => [
                     'id' => $cls->id,
                     'name' => $cls->name,

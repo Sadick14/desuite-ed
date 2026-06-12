@@ -43,6 +43,7 @@ const paymentPercentage = computed(() => {
   if (props.financial.expected === 0) {
     return 0;
   }
+
   return Math.round((props.financial.paid / props.financial.expected) * 100);
 });
 
@@ -53,6 +54,7 @@ const formatDate = (date: string) => {
   if (!date) {
     return '—';
   }
+
   return new Date(date).toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',

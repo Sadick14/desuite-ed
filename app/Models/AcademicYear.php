@@ -11,15 +11,11 @@ class AcademicYear extends Model
 
     protected $fillable = [
         'name',
-        'start_date',
-        'end_date',
-        'is_active',
+        'ended_at',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
-        'start_date' => 'date',
-        'end_date' => 'date',
+        'ended_at' => 'datetime',
     ];
 
     public function terms()
@@ -50,5 +46,30 @@ class AcademicYear extends Model
             ->with(['class', 'student'])
             ->get()
             ->groupBy(fn ($e) => $e->class->level);
+    }
+
+    public function isActive(): bool
+    {
+        return $this->terms()->where('is_active', true)->exists();
+    }
+
+    public function isEnded(): bool
+    {
+        return $this->ended_at !== null;
+    }
+
+    public function endYear(): void
+    {
+        $this->update(['ended_at' => now()]);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereNull('ended_at');
+    }
+
+    public function scopeEnded($query)
+    {
+        return $query->whereNotNull('ended_at');
     }
 }

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
 import {
   Building2,
   Mail,
@@ -11,6 +10,7 @@ import {
   X,
   Upload,
 } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 
 const props = defineProps<{
   school: {
@@ -40,17 +40,22 @@ const uploadError = ref<string | null>(null);
 const handleLogoUpload = (event: Event) => {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
-  if (!file) return;
+
+  if (!file) {
+return;
+}
 
   // Validate file type
   if (!file.type.startsWith('image/')) {
     uploadError.value = 'Please upload an image file (JPEG, PNG, etc.)';
+
     return;
   }
 
   // Validate file size (max 2MB)
   if (file.size > 2 * 1024 * 1024) {
     uploadError.value = 'Logo must be less than 2MB';
+
     return;
   }
 
@@ -72,7 +77,10 @@ const removeLogo = () => {
   uploadError.value = null;
   // Clear file input
   const fileInput = document.getElementById('logo_input') as HTMLInputElement;
-  if (fileInput) fileInput.value = '';
+
+  if (fileInput) {
+fileInput.value = '';
+}
 };
 
 // Submit form

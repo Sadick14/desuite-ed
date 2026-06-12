@@ -69,6 +69,7 @@ const getRoleBadgeClass = (role: string) => {
     parent: 'bg-teal-100 text-teal-800 border border-teal-200',
     member: 'bg-gray-100 text-gray-800 border border-gray-200',
   };
+
   return classes[role] || 'bg-gray-100 text-gray-800 border border-gray-200';
 };
 

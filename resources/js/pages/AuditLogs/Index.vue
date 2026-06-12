@@ -34,17 +34,20 @@ const filterDate = ref('');
 // Unique action types and models for filters
 const actionOptions = computed(() => {
   const actions = new Set(props.logs.map(log => log.action));
+
   return Array.from(actions).sort();
 });
 
 const modelOptions = computed(() => {
   const models = new Set(props.logs.map(log => log.model));
+
   return Array.from(models).sort();
 });
 
 // Filtered logs
 const filteredLogs = computed(() => {
   let result = props.logs;
+
   if (search.value) {
     const term = search.value.toLowerCase();
     result = result.filter(log =>
@@ -53,16 +56,20 @@ const filteredLogs = computed(() => {
       log.action.toLowerCase().includes(term)
     );
   }
+
   if (filterAction.value) {
     result = result.filter(log => log.action === filterAction.value);
   }
+
   if (filterModel.value) {
     result = result.filter(log => log.model === filterModel.value);
   }
+
   if (filterDate.value) {
     const targetDate = new Date(filterDate.value).toDateString();
     result = result.filter(log => new Date(log.created_at).toDateString() === targetDate);
   }
+
   return result;
 });
 
@@ -81,6 +88,7 @@ const getActionBadgeClass = (action: string) => {
     updated: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
     deleted: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   };
+
   return classes[action] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
 };
 

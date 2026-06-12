@@ -7,13 +7,13 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
-use App\Http\Controllers\ExamController;
+use App\Http\Controllers\ExamTemplateController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FeeStructureController;
-use App\Http\Controllers\GradeController;
-use App\Http\Controllers\GradeScaleRuleController;
+use App\Http\Controllers\FinanceController;
+use App\Http\Controllers\GradingScaleController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PromotionController;
 use App\Http\Controllers\ReportController;
@@ -21,7 +21,7 @@ use App\Http\Controllers\SchoolClassController;
 use App\Http\Controllers\SchoolController;
 use App\Http\Controllers\SmsController;
 use App\Http\Controllers\StudentController;
-use App\Http\Controllers\TermController;
+use App\Http\Controllers\StudentMarkController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,7 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     */
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
-        
+
     /*
     |--------------------------------------------------------------------------
     | USER MANAGEMENT
@@ -57,9 +57,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     | GRADING & ASSESSMENT SETTINGS
     |--------------------------------------------------------------------------
     */
-    Route::resource('grade-scale-rules', GradeScaleRuleController::class);
+    Route::resource('grading-scales', GradingScaleController::class);
     Route::resource('assessment-settings', AssessmentSettingController::class);
     Route::resource('exam-templates', ExamTemplateController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('student-marks', StudentMarkController::class);
+    Route::get('students/{student}/grades', [StudentMarkController::class, 'showStudentGrades'])->name('students.grades');
+    Route::post('student-marks/{studentMark}/submit', [StudentMarkController::class, 'submit'])->name('student-marks.submit');
+    Route::post('student-marks/{studentMark}/approve', [StudentMarkController::class, 'approve'])->name('student-marks.approve');
+    Route::post('student-marks/{studentMark}/reject', [StudentMarkController::class, 'reject'])->name('student-marks.reject');
+    Route::get('student-marks/reports/{term}', [StudentMarkController::class, 'generateReports'])->name('student-marks.reports');
 
     /*
     |--------------------------------------------------------------------------
@@ -67,7 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::resource('academic-years', AcademicYearController::class);
-    Route::resource('terms', TermController::class);
+    Route::post('academic-years/{academicYear}/end', [AcademicYearController::class, 'endYear'])->name('academic-years.end');
 
     /*
     |--------------------------------------------------------------------------
@@ -75,7 +81,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::resource('classes', SchoolClassController::class);
+    Route::post('classes/{class}/duplicate', [SchoolClassController::class, 'duplicate'])->name('classes.duplicate');
     Route::resource('students', StudentController::class);
+
+    /*
+    |--------------------------------------------------------------------------
+    | STUDENT ATTENDANCE
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('/', [AttendanceController::class, 'index'])->name('index');
+        Route::post('/store', [AttendanceController::class, 'store'])->name('store');
+        Route::post('/bulk', [AttendanceController::class, 'bulkStore'])->name('bulkStore');
+        Route::get('/history', [AttendanceController::class, 'history'])->name('history');
+        Route::get('/report', [AttendanceController::class, 'report'])->name('report');
+        Route::get('/analytics', [AttendanceController::class, 'analytics'])->name('analytics');
+        Route::delete('/{attendance}', [AttendanceController::class, 'destroy'])->name('destroy');
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -103,6 +125,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | FINANCIAL REPORTS & COLLECTIONS
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('finance')->name('finance.')->group(function () {
+        Route::get('/collections', [FinanceController::class, 'collectionsIndex'])->name('collections.index');
+        Route::get('/payment-history', [FinanceController::class, 'paymentHistory'])->name('payment-history');
+        Route::get('/year-end-report', [FinanceController::class, 'yearEndReport'])->name('year-end-report');
+        Route::get('/students/{student}/financial', [FinanceController::class, 'studentFinancial'])->name('student-financial');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
     | REPORTS & ANALYTICS
     |--------------------------------------------------------------------------
     */
@@ -126,28 +160,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
     Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show'])->name('audit-logs.show');
 
-    /*
-    |--------------------------------------------------------------------------
-    | ATTENDANCE TRACKING
-    |--------------------------------------------------------------------------
-    */
-    Route::prefix('attendance')->name('attendance.')->group(function () {
-        Route::get('/', [AttendanceController::class, 'index'])->name('index');
-        Route::post('/store', [AttendanceController::class, 'store'])->name('store');
-        Route::get('/students/{student}', [AttendanceController::class, 'show'])->name('student');
-    });
+
 
     /*
     |--------------------------------------------------------------------------
-    | ACADEMICS: COURSES, EXAMS, GRADES
+    | ACADEMICS: COURSES
     |--------------------------------------------------------------------------
     */
     Route::resource('courses', CourseController::class);
-    Route::resource('exams', ExamController::class);
-    Route::prefix('grades')->name('grades.')->group(function () {
-        Route::get('/', [GradeController::class, 'index'])->name('index');
-        Route::post('/store', [GradeController::class, 'store'])->name('store');
-    });
 
     /*
     |--------------------------------------------------------------------------

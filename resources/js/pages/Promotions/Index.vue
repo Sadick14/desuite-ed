@@ -76,6 +76,7 @@ function getLevelLabel(level: string): string {
 function quickAutoPromote() {
   if (!selectedFromClass.value || !selectedToClass.value || !selectedToYear.value) {
     alert('Please ensure you have selected the From Class, To Year, and Default Target Class first.');
+
     return;
   }
 
@@ -208,22 +209,29 @@ watch(selectedToClass, (newClassId) => {
 
 // Find equivalent target class for retention (repeating the class in the new year)
 const equivalentClassForSource = computed(() => {
-  if (!selectedFromClass.value || !selectedToYear.value)
-    return null;
+  if (!selectedFromClass.value || !selectedToYear.value) {
+return null;
+}
 
   const sourceClass = fromClasses.value.find(c => c.id === selectedFromClass.value);
 
-  if (!sourceClass) return null;
+  if (!sourceClass) {
+return null;
+}
 
   // Find class with same name in target year
   const sameName = toClasses.value.find(c => c.name.toLowerCase() === sourceClass.name.toLowerCase());
 
-  if (sameName) return sameName.id;
+  if (sameName) {
+return sameName.id;
+}
 
   // Find class with same level in target year
   const sameLevel = toClasses.value.find(c => c.level === sourceClass.level);
 
-  if (sameLevel) return sameLevel.id;
+  if (sameLevel) {
+return sameLevel.id;
+}
 
   return null;
 });
@@ -242,8 +250,12 @@ function initPromotionRules() {
 
 // Student Individual Action Mutators
 function setStudentAction(studentId: number, action: 'promote' | 'retain' | 'withdraw') {
-  if (!promotionRules.value[studentId]) return;
+  if (!promotionRules.value[studentId]) {
+return;
+}
+
   promotionRules.value[studentId].action = action;
+
   if (action === 'promote') {
     promotionRules.value[studentId].target_class_id = selectedToClass.value || null;
   } else if (action === 'retain') {
@@ -254,14 +266,21 @@ function setStudentAction(studentId: number, action: 'promote' | 'retain' | 'wit
 }
 
 function setStudentTargetClass(studentId: number, classId: number) {
-  if (!promotionRules.value[studentId]) return;
+  if (!promotionRules.value[studentId]) {
+return;
+}
+
   promotionRules.value[studentId].target_class_id = classId || null;
 }
 
 // Bulk Actions Logic
 const filteredStudents = computed(() => {
-  if (!searchQuery.value.trim()) return students.value;
+  if (!searchQuery.value.trim()) {
+return students.value;
+}
+
   const q = searchQuery.value.toLowerCase();
+
   return students.value.filter(
     s => s.student_name.toLowerCase().includes(q) || s.student_id_code.toLowerCase().includes(q)
   );
@@ -300,10 +319,15 @@ const summaryStats = computed(() => {
 
   students.value.forEach(s => {
     const rule = promotionRules.value[s.student_id];
+
     if (rule) {
-      if (rule.action === 'promote') promoted++;
-      else if (rule.action === 'retain') retained++;
-      else if (rule.action === 'withdraw') withdrawn++;
+      if (rule.action === 'promote') {
+promoted++;
+} else if (rule.action === 'retain') {
+retained++;
+} else if (rule.action === 'withdraw') {
+withdrawn++;
+}
     }
   });
 
@@ -313,6 +337,7 @@ const summaryStats = computed(() => {
 // View Student History
 async function viewEnrollmentHistory(student: Student) {
   selectedStudentForHistory.value = student;
+
   try {
     const response = await fetch(`/api/student/${student.student_id}/enrollment-history`);
     enrollmentHistory.value = await response.json();
@@ -320,6 +345,7 @@ async function viewEnrollmentHistory(student: Student) {
     console.error('Failed to fetch enrollment history:', error);
     enrollmentHistory.value = [];
   }
+
   showHistory.value = true;
 }
 
@@ -328,27 +354,37 @@ function nextStep() {
   if (currentStep.value === 1) {
     if (!selectedFromYear.value || !selectedFromClass.value || !selectedToYear.value) {
       alert('Please select the source and destination academic years along with the source class.');
+
       return;
     }
+
     if (selectedFromYear.value === selectedToYear.value) {
       alert('Source and target academic years must be different.');
+
       return;
     }
+
     if (students.value.length === 0) {
       alert('No active student enrollments found in the selected source class.');
+
       return;
     }
+
     currentStep.value = 2;
   } else if (currentStep.value === 2) {
     // Check if at least one promote/retain rule has target class
     const missingTarget = students.value.some(student => {
       const rule = promotionRules.value[student.student_id];
+
       return rule && (rule.action === 'promote' || rule.action === 'retain') && !rule.target_class_id;
     });
+
     if (missingTarget) {
       alert('One or more students selected for promotion or retention do not have a target class assigned.');
+
       return;
     }
+
     currentStep.value = 3;
   }
 }
@@ -366,6 +402,7 @@ function executePromotion() {
   // Format payload
   const promotionsPayload = students.value.map(s => {
     const rule = promotionRules.value[s.student_id];
+
     return {
       student_id: s.student_id,
       action: rule.action,
@@ -401,7 +438,9 @@ function executePromotion() {
 
 // CSV Export
 function exportPromotedStudents() {
-  if (students.value.length === 0) return;
+  if (students.value.length === 0) {
+return;
+}
 
   const csvContent = [
     ['Student Name', 'ID Code', 'Action', 'From Class', 'Destination Class', 'Date'].join(','),
@@ -410,6 +449,7 @@ function exportPromotedStudents() {
       const targetClass = toClasses.value.find(c => c.id === rule?.target_class_id);
       const actionLabel = rule ? rule.action.toUpperCase() : 'UNKNOWN';
       const destLabel = rule?.action === 'withdraw' ? 'EXITED REGISTRY' : (targetClass ? targetClass.name : 'N/A');
+
       return [
         `"${s.student_name}"`,
         s.student_id_code,

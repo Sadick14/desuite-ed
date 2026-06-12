@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import { watchDebounced } from '@vueuse/core';
 import {
   Plus,
   Search,
@@ -9,10 +10,9 @@ import {
   Eye,
   X,
 } from 'lucide-vue-next';
-import { watchDebounced } from '@vueuse/core';
 import { ref } from 'vue';
-import StudentModal from './StudentModal.vue';
 import ExportDropdown from '@/components/ExportDropdown.vue';
+import StudentModal from './StudentModal.vue';
 
 // Quick payment handler
 const recordQuickPayment = (studentId: number) => {

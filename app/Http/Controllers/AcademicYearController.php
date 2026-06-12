@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AcademicYear;
+use App\Models\Term;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -11,7 +12,7 @@ class AcademicYearController extends Controller
     public function index()
     {
         return Inertia::render('AcademicYears/Index', [
-            'years' => AcademicYear::withCount('terms')->latest()->get(),
+            'years' => AcademicYear::with('terms')->withCount('terms')->latest()->get(),
         ]);
     }
 
@@ -19,17 +20,29 @@ class AcademicYearController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string'],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date'],
-            'is_active' => ['boolean'],
+            'terms' => ['sometimes', 'array'],
+            'terms.*.name' => ['required_with:terms', 'string'],
+            'terms.*.start_date' => ['required_with:terms', 'date'],
+            'terms.*.end_date' => ['required_with:terms', 'date'],
+            'terms.*.is_active' => ['sometimes', 'boolean'],
         ]);
 
-        // If this year is set as active, deactivate all other years
-        if (isset($data['is_active']) && $data['is_active']) {
-            AcademicYear::where('is_active', true)->update(['is_active' => false]);
+        $terms = $data['terms'] ?? [];
+        unset($data['terms']);
+
+        $year = AcademicYear::create($data);
+
+        // Deactivate all other terms if any new term is active
+        $hasActiveTerm = collect($terms)->contains('is_active', true);
+        if ($hasActiveTerm) {
+            Term::where('is_active', true)->update(['is_active' => false]);
         }
 
-        AcademicYear::create($data);
+        // Create terms for this year
+        foreach ($terms as $term) {
+            $term['academic_year_id'] = $year->id;
+            Term::create($term);
+        }
 
         return redirect()->back();
     }
@@ -38,17 +51,30 @@ class AcademicYearController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string'],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date'],
-            'is_active' => ['boolean'],
+            'terms' => ['sometimes', 'array'],
+            'terms.*.name' => ['required_with:terms', 'string'],
+            'terms.*.start_date' => ['required_with:terms', 'date'],
+            'terms.*.end_date' => ['required_with:terms', 'date'],
+            'terms.*.is_active' => ['sometimes', 'boolean'],
         ]);
 
-        // If this year is being set to active, deactivate all other years
-        if (isset($data['is_active']) && $data['is_active']) {
-            AcademicYear::where('id', '!=', $academicYear->id)->where('is_active', true)->update(['is_active' => false]);
-        }
+        $terms = $data['terms'] ?? [];
+        unset($data['terms']);
 
         $academicYear->update($data);
+
+        // Deactivate all other terms if any new term is active
+        $hasActiveTerm = collect($terms)->contains('is_active', true);
+        if ($hasActiveTerm) {
+            Term::where('is_active', true)->update(['is_active' => false]);
+        }
+
+        // Delete old terms and create new ones
+        $academicYear->terms()->delete();
+        foreach ($terms as $term) {
+            $term['academic_year_id'] = $academicYear->id;
+            Term::create($term);
+        }
 
         return redirect()->back();
     }
@@ -58,5 +84,16 @@ class AcademicYearController extends Controller
         $academicYear->delete();
 
         return redirect()->back();
+    }
+
+    public function endYear(AcademicYear $academicYear)
+    {
+        if ($academicYear->isEnded()) {
+            return redirect()->back()->with('error', 'This academic year is already ended');
+        }
+
+        $academicYear->endYear();
+
+        return redirect()->back()->with('success', "Academic year '{$academicYear->name}' has been closed. All data is now archived.");
     }
 }

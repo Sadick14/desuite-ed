@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Course;
-use App\Models\SchoolClass;
-use App\Models\ExamTemplate;
 use App\Models\AcademicYear;
+use App\Models\Course;
+use App\Models\Exam;
+use App\Models\ExamTemplate;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -13,12 +13,10 @@ class CourseController extends Controller
 {
     public function index(Request $request)
     {
-        $courses = Course::with('schoolClass')->latest()->paginate(10);
-        $classes = SchoolClass::all();
+        $courses = Course::latest()->paginate(10);
 
         return Inertia::render('Courses/Index', [
             'courses' => $courses,
-            'classes' => $classes,
         ]);
     }
 
@@ -27,7 +25,6 @@ class CourseController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50',
-            'school_class_id' => 'nullable|exists:school_classes,id',
             'description' => 'nullable|string',
             'level' => 'nullable|string',
         ]);
@@ -35,7 +32,8 @@ class CourseController extends Controller
         $course = Course::create($request->all());
 
         // Auto-create exams using templates
-        $activeYear = AcademicYear::where('is_active', true)->first();
+        $allYears = AcademicYear::latest()->get();
+        $activeYear = $allYears->firstWhere(fn ($y) => $y->isActive());
         if ($activeYear) {
             $templates = ExamTemplate::where(function ($q) use ($course) {
                 $q->whereNull('level')->orWhere('level', $course->level);
@@ -43,7 +41,7 @@ class CourseController extends Controller
 
             foreach ($activeYear->terms as $term) {
                 foreach ($templates as $template) {
-                    \App\Models\Exam::create([
+                    Exam::create([
                         'name' => $template->name,
                         'exam_type' => $template->exam_type,
                         'weight' => $template->weight,
@@ -67,7 +65,6 @@ class CourseController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50',
-            'school_class_id' => 'nullable|exists:school_classes,id',
             'description' => 'nullable|string',
             'level' => 'nullable|string',
         ]);

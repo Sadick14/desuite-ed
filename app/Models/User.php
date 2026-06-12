@@ -4,8 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Concerns\HasTeams;
-use App\Enums\TeamRole;
 use App\Enums\TeamPermission;
+use App\Enums\TeamRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -37,7 +37,7 @@ class User extends Authenticatable implements PasskeyUser
             'role' => TeamRole::class,
         ];
     }
-    
+
     /**
      * Check if user has the specified role.
      */
@@ -45,7 +45,7 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->role === $role;
     }
-    
+
     /**
      * Check if user has any of the specified roles.
      */
@@ -59,7 +59,7 @@ class User extends Authenticatable implements PasskeyUser
      */
     public function hasPermission(TeamPermission $permission): bool
     {
-        if (!$this->role) {
+        if (! $this->role) {
             return false;
         }
 

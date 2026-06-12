@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\BalanceService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -79,5 +80,30 @@ class Student extends Model
         $count = self::count() + 1;
 
         return 'SCH-'.str_pad($count, 6, '0', STR_PAD_LEFT);
+    }
+
+    public function canEnrollNextTerm(Term $currentTerm): bool
+    {
+        return BalanceService::canEnrollNextTerm($this, $currentTerm);
+    }
+
+    public function canPromoteNextYear(): bool
+    {
+        return BalanceService::canPromoteNextYear($this);
+    }
+
+    public function getOutstandingBalance(AcademicYear $year): array
+    {
+        return BalanceService::outstandingBalanceForYear($this, $year);
+    }
+
+    public function getCurrentBalance(): array
+    {
+        $currentTerm = Term::where('is_active', true)->first();
+        if (! $currentTerm) {
+            return ['balance' => 0, 'breakdown' => []];
+        }
+
+        return BalanceService::forStudent($this, $currentTerm);
     }
 }

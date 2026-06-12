@@ -76,6 +76,7 @@ const props = defineProps<{
   terms: any[];
   feeStructures: FeeStructure[];
   activeTerm: any;
+  feedingFeeData: Record<number, any>;
   school: {
     name: string;
     email: string | null;
@@ -86,10 +87,14 @@ const props = defineProps<{
 }>();
 
 const schoolLogoUrl = computed(() => {
-  if (!props.school?.logo) return null;
+  if (!props.school?.logo) {
+return null;
+}
+
   if (props.school.logo.startsWith('http') || props.school.logo.startsWith('data:')) {
     return props.school.logo;
   }
+
   return props.school.logo.startsWith('/storage') ? props.school.logo : `/storage/${props.school.logo}`;
 });
 
@@ -98,6 +103,7 @@ const paymentsArray = computed(() => {
   if (Array.isArray(props.payments)) {
     return props.payments;
   }
+
   return props.payments?.data || [];
 });
 
@@ -116,6 +122,7 @@ const selectedClassFilter = ref(''); // Filter students by class
 // Store the last created payment AND the selected student for receipt
 const lastPayment = ref<Payment | null>(null);
 const lastStudent = ref<Student | null>(null);
+const receipitPayments = ref<Array<{ payment_type: string; amount: number }>>([]);
 
 const form = useForm({
   student_id: '' as string | number,
@@ -134,6 +141,7 @@ onMounted(() => {
 
   if (studentIdParam) {
     const student = props.students.find(s => s.id === Number(studentIdParam));
+    
     if (student) {
       form.student_id = String(student.id);
       selectedClassFilter.value = String(student.school_class_id);
@@ -153,6 +161,7 @@ const uniqueClasses = computed(() => {
       classes.set(s.class.id, s.class);
     }
   });
+
   return Array.from(classes.values()).sort((a, b) => a.name.localeCompare(b.name));
 });
 
@@ -160,6 +169,7 @@ const uniqueClasses = computed(() => {
 const filteredStudents = computed(() => {
   // First, filter by class if selected
   let students = props.students;
+
   if (selectedClassFilter.value) {
     students = students.filter(
       s => String(s.class?.id) === selectedClassFilter.value
@@ -207,8 +217,12 @@ const selectedStudent = computed(() =>
 );
 
 const availableFeeStructures = computed(() => {
-  if (!selectedStudent.value || !props.activeTerm) return [];
+  if (!selectedStudent.value || !props.activeTerm) {
+return [];
+}
+
   const studentLevel = selectedStudent.value.class?.level;
+
   return props.feeStructures.filter(fs =>
     fs.level === studentLevel && fs.term_id === props.activeTerm.id
   );
@@ -216,14 +230,18 @@ const availableFeeStructures = computed(() => {
 
 // Calculate paid amount for each fee type for the selected student in active term
 const feeCardsWithBalance = computed(() => {
-  if (!selectedStudent.value || !props.activeTerm) return [];
+  if (!selectedStudent.value || !props.activeTerm) {
+return [];
+}
 
   if (selectedStudent.value.balances?.breakdown) {
     const studentLevel = selectedStudent.value.class?.level;
+
     return selectedStudent.value.balances.breakdown.map((b: any) => {
       const fs = props.feeStructures.find(
         f => f.fee_type === b.fee_type && f.level === studentLevel && f.term_id === props.activeTerm.id
       );
+
       return {
         id: fs?.id || Math.random(),
         fee_type: b.fee_type,
@@ -253,20 +271,47 @@ const feeCardsWithBalance = computed(() => {
 
 // Format fee type for display
 const formatFeeType = (type: string) => {
-  if (!type) return '';
+  if (!type) {
+return '';
+}
+
   return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
 const selectedFeeCard = computed(() => {
-  if (!form.payment_type) return null;
+  if (!form.payment_type) {
+return null;
+}
+
   return feeCardsWithBalance.value.find(c => c.fee_type === form.payment_type);
 });
 
 const isOverpaying = computed(() => {
-  if (!selectedFeeCard.value || form.payment_type === 'feeding_fees') return false;
+  if (!selectedFeeCard.value || form.payment_type === 'feeding_fees') {
+return false;
+}
+
   const amt = parseFloat(form.amount);
-  if (isNaN(amt)) return false;
+
+  if (isNaN(amt)) {
+return false;
+}
+
   return amt > selectedFeeCard.value.balance + 0.01;
+});
+
+const selectedStudentFeedingData = computed(() => {
+  if (!form.student_id) {
+    return null;
+  }
+
+  if (form.payment_type !== 'feeding_fees') {
+    return null;
+  }
+
+  const data = props.feedingFeeData[Number(form.student_id)];
+
+  return data || null;
 });
 
 // Step navigation validation
@@ -307,13 +352,18 @@ watch(() => form.student_id, (newId) => {
 
 // ---------- Filter & stats ----------
 const selectedTermId = computed(() => {
-  if (!filterTerm.value) return '';
+  if (!filterTerm.value) {
+return '';
+}
+
   const term = props.terms.find(t => t.name === filterTerm.value);
+
   return term ? term.id : '';
 });
 
 const filteredPayments = computed(() => {
   let result = paymentsArray.value;
+  
   if (search.value) {
     const term = search.value.toLowerCase();
     result = result.filter(p =>
@@ -321,9 +371,19 @@ const filteredPayments = computed(() => {
       p.receipt_number?.toLowerCase().includes(term)
     );
   }
-  if (filterTerm.value) result = result.filter(p => p.term.name === filterTerm.value);
-  if (filterType.value) result = result.filter(p => p.payment_type === filterType.value);
-  if (filterMethod.value) result = result.filter(p => p.payment_method === filterMethod.value);
+  
+  if (filterTerm.value) {
+result = result.filter(p => p.term.name === filterTerm.value);
+}
+  
+  if (filterType.value) {
+result = result.filter(p => p.payment_type === filterType.value);
+}
+  
+  if (filterMethod.value) {
+result = result.filter(p => p.payment_method === filterMethod.value);
+}
+  
   return result;
 });
 
@@ -331,6 +391,10 @@ const totalPayments = computed(() => filteredPayments.value.length);
 const totalAmount = computed(() => filteredPayments.value.reduce((sum, p) => sum + p.amount, 0));
 const averagePayment = computed(() => totalPayments.value ? totalAmount.value / totalPayments.value : 0);
 const uniqueStudents = computed(() => new Set(filteredPayments.value.map(p => p.student.first_name + p.student.last_name)).size);
+
+const receiptTotal = computed(() =>
+  receipitPayments.value.reduce((sum, p) => sum + parseFloat(String(p.amount) || '0'), 0)
+);
 
 // Badge helpers
 const getTypeBadgeClass = (type: string) => {
@@ -340,6 +404,7 @@ const getTypeBadgeClass = (type: string) => {
     registration_fees: 'bg-purple-100/80 text-purple-900 border-purple-200/30',
     others: 'bg-gray-100/80 text-gray-700 border-gray-200/30',
   };
+
   return classes[type] || classes.others;
 };
 
@@ -349,6 +414,7 @@ const getMethodBadgeClass = (method: string) => {
     momo: 'bg-orange-100/80 text-orange-900 border-orange-200/30',
     bank: 'bg-slate-100/80 text-slate-900 border-slate-200/30',
   };
+
   return classes[method] || classes.cash;
 };
 
@@ -377,22 +443,35 @@ function submit() {
 
   if (!form.student_id) {
     form.setError('student_id', 'Please select a student.');
+
     return;
   }
 
   const validPayments = form.payments.filter(p => parseFloat(p.amount) > 0);
+
   if (validPayments.length === 0) {
     form.setError('payments', 'Please enter at least one payment amount.');
+
     return;
   }
 
-  form.post('/payments/bulk', {
+  const paymentsToSubmit = form.payments.filter(p => parseFloat(p.amount) > 0);
+  receipitPayments.value = paymentsToSubmit;
+
+  form.post(route('payments.storeBulk'), {
     onSuccess: (page: any) => {
-      lastPayment.value = page.props.payment as Payment;
-      const student = props.students.find(s => s.id === form.student_id);
-      lastStudent.value = student || null;
-      modalState.value = 'receipt';
+      if (page.props.payment) {
+        lastPayment.value = page.props.payment as Payment;
+        const student = props.students.find(s => s.id === form.student_id);
+        lastStudent.value = student || null;
+        modalState.value = 'receipt';
+      }
       form.reset();
+    },
+    onError: (errors: any) => {
+      console.error('Payment submission error:', errors);
+      const errorMsg = Object.values(errors).flat().join(', ') as string;
+      form.setError('payments', errorMsg || 'Payment could not be processed. Please check your entries.');
     },
     preserveScroll: true,
   });
@@ -400,7 +479,7 @@ function submit() {
 
 function destroy(id: number) {
   if (confirm('Delete this payment? This action cannot be undone.')) {
-    router.delete(`/payments/${id}`);
+    router.delete(route('payments.destroy', { payment: id }));
   }
 }
 
@@ -409,7 +488,9 @@ function printReceipt() {
 }
 
 function openWhatsApp() {
-  if (!lastPayment.value || !lastStudent.value) return;
+  if (!lastPayment.value || !lastStudent.value) {
+return;
+}
 
   const student = lastStudent.value;
   const message = `Payment of GHS ${lastPayment.value.amount} received for ${student.first_name} ${student.last_name} - ${formatFeeType(lastPayment.value.payment_type)} - ${lastPayment.value.term.name}. Receipt: ${lastPayment.value.receipt_number}. Thank you.`;
@@ -425,7 +506,9 @@ function openWhatsApp() {
 
 // Copy SMS Message
 function copySMS() {
-  if (!lastPayment.value || !lastStudent.value) return;
+  if (!lastPayment.value || !lastStudent.value) {
+return;
+}
 
   const student = lastStudent.value;
   const message = `Payment of GHS ${lastPayment.value.amount} received for ${student.first_name} ${student.last_name} - ${formatFeeType(lastPayment.value.payment_type)} - ${lastPayment.value.term.name}. Receipt: ${lastPayment.value.receipt_number}. Thank you.`;
@@ -788,6 +871,48 @@ function clearFilters() {
                     <span class="font-mono font-bold text-amber-800 bg-amber-100/50 px-2 py-0.5 rounded">{{ selectedStudent?.student_id }}</span>
                   </div>
 
+                  <!-- FEEDING FEE BREAKDOWN (Attendance-Based) -->
+                  <div v-if="selectedStudentFeedingData && form.payments.some(p => p.payment_type === 'feeding_fees')" class="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                      <h3 class="font-bold text-gray-900 text-sm">Feeding Fee - Attendance Based</h3>
+                      <span class="text-xs bg-orange-200 text-orange-900 px-2 py-1 rounded-full font-semibold">Weekly Tracking</span>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-4 gap-2">
+                      <div class="bg-white rounded p-2.5 border border-orange-100">
+                        <p class="text-[10px] text-gray-600 uppercase font-bold">Total Owed</p>
+                        <p class="text-sm font-bold text-orange-600 mt-1">₵{{ (selectedStudentFeedingData.total_owed || 0).toFixed(2) }}</p>
+                      </div>
+                      <div class="bg-white rounded p-2.5 border border-orange-100">
+                        <p class="text-[10px] text-gray-600 uppercase font-bold">Total Paid</p>
+                        <p class="text-sm font-bold text-green-600 mt-1">₵{{ (selectedStudentFeedingData.total_paid || 0).toFixed(2) }}</p>
+                      </div>
+                      <div class="bg-white rounded p-2.5 border border-orange-100">
+                        <p class="text-[10px] text-gray-600 uppercase font-bold">Carryforward</p>
+                        <p class="text-sm font-bold text-blue-600 mt-1">₵{{ (selectedStudentFeedingData.carryforward || 0).toFixed(2) }}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Overpaid</p>
+                      </div>
+                      <div :class="['bg-white rounded p-2.5 border', selectedStudentFeedingData.outstanding > 0 ? 'border-red-100' : 'border-green-100']">
+                        <p class="text-[10px] text-gray-600 uppercase font-bold">Outstanding</p>
+                        <p :class="['text-sm font-bold mt-1', selectedStudentFeedingData.outstanding > 0 ? 'text-red-600' : 'text-green-600']">
+                          ₵{{ (selectedStudentFeedingData.outstanding || 0).toFixed(2) }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Weekly breakdown preview -->
+                    <div v-if="selectedStudentFeedingData.weekly_breakdown && selectedStudentFeedingData.weekly_breakdown.length > 0" class="text-xs space-y-1 bg-white/50 p-2 rounded border border-orange-100">
+                      <p class="font-bold text-gray-700 mb-2">Recent Weeks:</p>
+                      <div v-for="week in selectedStudentFeedingData.weekly_breakdown.slice(-2)" :key="week.week" class="flex justify-between text-gray-600">
+                        <span>Week {{ week.week }}: {{ week.days_attended }} days attended → ₵{{ week.amount_owed.toFixed(2) }} owed</span>
+                        <span :class="['font-semibold', week.outstanding > 0 ? 'text-red-600' : 'text-green-600']">
+                          ₵{{ week.outstanding.toFixed(2) }} outstanding
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- Bulk Payment Table -->
                   <div v-if="form.payments.length > 0" class="space-y-3">
                     <label class="block text-xs uppercase font-bold text-gray-500 tracking-wider">Enter Amounts for Each Fee Type *</label>
@@ -928,9 +1053,9 @@ function clearFilters() {
                     <div class="overflow-x-auto">
                       <table class="w-full text-xs">
                         <tbody class="divide-y divide-gray-200">
-                          <tr v-for="payment in form.payments.filter(p => parseFloat(p.amount || '0') > 0)" :key="payment.payment_type">
+                          <tr v-for="payment in receipitPayments" :key="payment.payment_type">
                             <td class="py-2 text-gray-600">{{ formatFeeType(payment.payment_type) }}</td>
-                            <td class="py-2 text-right font-bold text-gray-900">GHS {{ parseFloat(payment.amount || '0').toFixed(2) }}</td>
+                            <td class="py-2 text-right font-bold text-gray-900">GHS {{ parseFloat(String(payment.amount) || '0').toFixed(2) }}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -952,7 +1077,7 @@ function clearFilters() {
 
                       <dt class="text-amber-800 font-bold text-sm border-t border-dashed border-gray-200 pt-2 mt-1">Total Amount:</dt>
                       <dd class="text-lime-700 font-extrabold text-right text-base border-t border-dashed border-gray-200 pt-2 mt-1">
-                        GHS {{ parseFloat(totalPaymentAmount.toString()).toFixed(2) }}
+                        GHS {{ receiptTotal.toFixed(2) }}
                       </dd>
                     </dl>
                   </div>
@@ -1198,14 +1323,14 @@ function clearFilters() {
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
-          <tr class="text-sm text-gray-700">
-            <td class="py-4 px-4">1</td>
+          <tr v-for="(payment, idx) in receipitPayments" :key="payment.payment_type" class="text-sm text-gray-700">
+            <td class="py-4 px-4">{{ idx + 1 }}</td>
             <td class="py-4 px-4 font-medium">
-              {{ formatFeeType(lastPayment?.payment_type || '') }} Payment
+              {{ formatFeeType(payment.payment_type) }} Payment
               <span class="text-xs text-gray-500 block mt-0.5 font-normal">Academic Term: {{ lastPayment?.term?.name }}</span>
             </td>
             <td class="py-4 px-4 text-right font-bold text-gray-900">
-              GHS {{ (Number(lastPayment?.amount) || 0).toFixed(2) }}
+              GHS {{ parseFloat(String(payment.amount) || '0').toFixed(2) }}
             </td>
           </tr>
         </tbody>
@@ -1227,6 +1352,12 @@ function clearFilters() {
             <span :class="[ (lastStudent?.balances?.balance || 0) > 0 ? 'text-red-600' : 'text-green-600' ]">
               GHS {{ (Number(lastStudent?.balances?.balance) || 0).toFixed(2) }}
             </span>
+          </div>
+
+          <!-- Print Receipt Total -->
+          <div class="flex justify-between py-2 border-t border-gray-200 mt-4 text-base font-bold">
+            <span class="text-gray-900">Total Paid:</span>
+            <span class="text-lime-700">GHS {{ receiptTotal.toFixed(2) }}</span>
           </div>
         </div>
       </div>

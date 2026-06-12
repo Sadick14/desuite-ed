@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import {
   Plus,
   Trash2,
   Edit,
+  Copy,
   X,
   Search,
   School,
-  Layers,
+  BookOpen,
 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
@@ -16,7 +17,7 @@ type Class = {
   name: string;
   level: string;
   level_label: string;
-  students_count?: number;
+  courses: any[];
 };
 
 const props = defineProps<{
@@ -24,19 +25,16 @@ const props = defineProps<{
 }>();
 
 // UI state
-const showModal = ref(false);
-const editing = ref<Class | null>(null);
 const search = ref('');
-
-const form = useForm({
-  name: '',
-  level: '',
-});
 
 // Filter classes based on search
 const filteredClasses = computed(() => {
-  if (!search.value) return props.classes;
+  if (!search.value) {
+return props.classes;
+}
+
   const term = search.value.toLowerCase();
+
   return props.classes.filter(c =>
     c.name.toLowerCase().includes(term) ||
     c.level_label.toLowerCase().includes(term)
@@ -45,49 +43,19 @@ const filteredClasses = computed(() => {
 
 // Stats
 const totalClasses = computed(() => filteredClasses.value.length);
-const levelCount = computed(() => {
-  const levels = new Set(filteredClasses.value.map(c => c.level));
-  return levels.size;
+const courseCount = computed(() => {
+  const courseSet = new Set();
+  props.classes.forEach(c => {
+    c.courses?.forEach((course: any) => {
+      courseSet.add(course.id);
+    });
+  });
+
+  return courseSet.size;
 });
 
-// Level options for dropdown
-const levelOptions = [
-  { value: 'nursery', label: 'Nursery' },
-  { value: 'kindergarten', label: 'Kindergarten' },
-  { value: 'lower_primary', label: 'Lower Primary' },
-  { value: 'upper_primary', label: 'Upper Primary' },
-  { value: 'jhs', label: 'JHS' },
-];
-
-// Modal actions
-function openCreate() {
-  editing.value = null;
-  form.reset();
-  showModal.value = true;
-}
-
-function openEdit(classItem: Class) {
-  editing.value = classItem;
-  form.reset();
-  form.name = classItem.name;
-  form.level = classItem.level;
-  showModal.value = true;
-}
-
-function closeModal() {
-  showModal.value = false;
-  form.reset();
-  editing.value = null;
-}
-
-function submit() {
-  const url = editing.value ? `/classes/${editing.value.id}` : '/classes';
-  const method = editing.value ? 'put' : 'post';
-
-  form[method](url, {
-    onSuccess: closeModal,
-    preserveScroll: true,
-  });
+function duplicate(id: number) {
+  router.post(`/classes/${id}/duplicate`);
 }
 
 function destroy(id: number) {
@@ -104,26 +72,22 @@ function clearSearch() {
 <template>
   <Head title="Classes" />
 
-  <div class="min-h-screen bg-gradient-to-b from-amber-50 via-white to-amber-50 text-gray-900">
+  <div class="min-h-screen bg-gradient-to-b from-blue-50 via-white to-blue-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
       <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-amber-100/60 pb-5">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-blue-100/60 pb-5">
         <div>
-          <h1 class="text-2xl md:text-3xl font-bold text-gray-900">
-            Classes
-          </h1>
-          <p class="text-sm text-gray-600 mt-1">
-            Manage school classes and levels
-          </p>
+          <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Classes</h1>
+          <p class="text-sm text-gray-600 mt-1">Manage school classes and their assigned courses</p>
         </div>
-        <button
-          @click="openCreate"
+        <a
+          href="/classes/create"
           class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-lime-400 hover:bg-lime-500 text-gray-900 text-sm font-semibold rounded-xl shadow-sm transition-all"
         >
           <Plus class="w-4 h-4" />
-          Add Class
-        </button>
+          Create Class
+        </a>
       </div>
 
       <!-- Search & Stats -->
@@ -135,7 +99,7 @@ function clearSearch() {
               v-model="search"
               type="text"
               placeholder="Search by class name or level..."
-              class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-white/80 backdrop-blur-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+              class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
             <button
               v-if="search"
@@ -146,55 +110,77 @@ function clearSearch() {
             </button>
           </div>
         </div>
-        <div class="bg-white rounded-2xl border border-amber-100 p-4 flex items-center gap-3 shadow-xl shadow-amber-900/[0.01]">
-          <School class="w-5 h-5 text-amber-500" />
+        <div class="bg-white rounded-2xl border border-blue-100 p-4 flex items-center gap-3">
+          <School class="w-5 h-5 text-blue-500" />
           <div>
-            <p class="text-xs text-gray-500 uppercase">Total Classes</p>
-            <p class="text-2xl font-bold">{{ totalClasses }}</p>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Total Classes</p>
+            <p class="text-2xl font-bold text-gray-900">{{ totalClasses }}</p>
           </div>
         </div>
-        <div class="bg-white rounded-2xl border border-amber-100 p-4 flex items-center gap-3 shadow-xl shadow-amber-900/[0.01]">
-          <Layers class="w-5 h-5 text-amber-600" />
+        <div class="bg-white rounded-2xl border border-blue-100 p-4 flex items-center gap-3">
+          <BookOpen class="w-5 h-5 text-blue-600" />
           <div>
-            <p class="text-xs text-gray-500 uppercase">Levels</p>
-            <p class="text-2xl font-bold">{{ levelCount }}</p>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Total Courses</p>
+            <p class="text-2xl font-bold text-gray-900">{{ courseCount }}</p>
           </div>
         </div>
       </div>
 
       <!-- Classes Table -->
-      <div class="bg-white rounded-2xl border border-amber-100 shadow-xl shadow-amber-900/[0.01] overflow-hidden">
+      <div class="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-amber-100">
-            <thead class="bg-amber-50/70 backdrop-blur-sm">
+          <table class="min-w-full divide-y divide-blue-100">
+            <thead class="bg-blue-50/70">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Class Name</th>
-                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Level</th>
-                <th class="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Class Name</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Level</th>
+                <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Assigned Courses</th>
+                <th class="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-amber-50 bg-white">
-              <tr v-for="c in filteredClasses" :key="c.id" class="hover:bg-amber-50/30 transition-colors">
+            <tbody class="divide-y divide-blue-50">
+              <tr v-for="c in filteredClasses" :key="c.id" class="hover:bg-blue-50/30 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {{ c.name }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100/80 text-amber-900 border border-amber-200/30">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100/80 text-blue-900 border border-blue-200/30">
                     {{ c.level_label }}
                   </span>
                 </td>
+                <td class="px-6 py-4 text-sm text-gray-600">
+                  <div v-if="c.courses?.length" class="flex flex-wrap gap-1">
+                    <span
+                      v-for="course in c.courses.slice(0, 3)"
+                      :key="course.id"
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-amber-100/60 text-amber-900 border border-amber-200/30"
+                    >
+                      {{ course.name }}
+                    </span>
+                    <span v-if="c.courses.length > 3" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
+                      +{{ c.courses.length - 3 }} more
+                    </span>
+                  </div>
+                  <span v-else class="text-gray-400 italic">No courses assigned</span>
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right space-x-3">
-                  <button @click="openEdit(c)" class="text-green-600 hover:text-green-800">
+                  <a :href="`/classes/${c.id}/edit`" class="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1">
                     <Edit class="w-4 h-4" />
+                    <span class="text-xs font-medium">Edit</span>
+                  </a>
+                  <button @click="duplicate(c.id)" class="text-green-600 hover:text-green-800 inline-flex items-center gap-1">
+                    <Copy class="w-4 h-4" />
+                    <span class="text-xs font-medium">Duplicate</span>
                   </button>
-                  <button @click="destroy(c.id)" class="text-red-600 hover:text-red-800">
+                  <button @click="destroy(c.id)" class="text-red-600 hover:text-red-800 inline-flex items-center gap-1">
                     <Trash2 class="w-4 h-4" />
+                    <span class="text-xs font-medium">Delete</span>
                   </button>
                 </td>
               </tr>
               <tr v-if="filteredClasses.length === 0">
-                <td colspan="3" class="px-6 py-12 text-center text-gray-500">
-                  No classes found. Click "Add Class" to create one.
+                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                  No classes found. Click "Create Class" to add one.
                 </td>
               </tr>
             </tbody>
@@ -202,68 +188,5 @@ function clearSearch() {
         </div>
       </div>
     </div>
-
-    <!-- Modal -->
-    <Teleport to="body">
-      <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto" @click.self="closeModal">
-        <div class="flex min-h-screen items-center justify-center p-4">
-          <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="closeModal"></div>
-          <div class="relative bg-white rounded-2xl shadow-xl shadow-amber-900/[0.01] max-w-md w-full transform transition-all border border-amber-100">
-            <div class="flex items-center justify-between p-6 border-b border-amber-100/60">
-              <h2 class="text-xl font-semibold text-gray-900">
-                {{ editing ? 'Edit Class' : 'Create Class' }}
-              </h2>
-              <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
-                <X class="w-5 h-5" />
-              </button>
-            </div>
-            <form @submit.prevent="submit" class="p-6 space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Class Name *</label>
-                <input
-                  v-model="form.name"
-                  type="text"
-                  required
-                  placeholder="e.g., Grade 1A, JHS 2"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-                <p v-if="form.errors.name" class="text-red-500 text-xs mt-1">{{ form.errors.name }}</p>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Level *</label>
-                <select
-                  v-model="form.level"
-                  required
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                >
-                  <option value="">Select Level</option>
-                  <option v-for="opt in levelOptions" :key="opt.value" :value="String(opt.value)">
-                    {{ opt.label }}
-                  </option>
-                </select>
-                <p v-if="form.errors.level" class="text-red-500 text-xs mt-1">{{ form.errors.level }}</p>
-              </div>
-              <div class="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  @click="closeModal"
-                  class="flex-1 px-4 py-2 border border-amber-100 rounded-lg text-gray-700 hover:bg-amber-50/30 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  :disabled="form.processing"
-                  class="flex-1 px-4 py-2 bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-lg font-semibold disabled:opacity-50 flex items-center justify-center gap-2 transition"
-                >
-                  <span v-if="form.processing" class="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></span>
-                  {{ form.processing ? 'Saving...' : (editing ? 'Update' : 'Create') }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>

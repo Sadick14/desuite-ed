@@ -161,4 +161,65 @@ class BalanceService
 
         return $students;
     }
+
+    /**
+     * Check if student can enroll in next term (no outstanding fees from current term)
+     */
+    public static function canEnrollNextTerm(Student $student, Term $currentTerm): bool
+    {
+        $balance = self::forStudent($student, $currentTerm);
+
+        return $balance['balance'] == 0;
+    }
+
+    /**
+     * Check if student can progress to next academic year (no outstanding fees from current year)
+     */
+    public static function canPromoteNextYear(Student $student): bool
+    {
+        $currentYear = $student->currentEnrollment()?->academicYear;
+
+        if (! $currentYear) {
+            return true;
+        }
+
+        $terms = $currentYear->terms;
+
+        foreach ($terms as $term) {
+            $balance = self::forStudent($student, $term);
+            if ($balance['balance'] > 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get total outstanding balance for student across all terms in an academic year
+     */
+    public static function outstandingBalanceForYear(Student $student, $academicYear): array
+    {
+        $terms = $academicYear->terms;
+        $totalBalance = 0;
+        $termBreakdown = [];
+
+        foreach ($terms as $term) {
+            $balance = self::forStudent($student, $term);
+            if ($balance['balance'] > 0) {
+                $termBreakdown[] = [
+                    'term_name' => $term->name,
+                    'balance' => $balance['balance'],
+                    'breakdown' => $balance['breakdown'],
+                ];
+                $totalBalance += $balance['balance'];
+            }
+        }
+
+        return [
+            'total_balance' => $totalBalance,
+            'has_outstanding' => $totalBalance > 0,
+            'term_breakdown' => $termBreakdown,
+        ];
+    }
 }

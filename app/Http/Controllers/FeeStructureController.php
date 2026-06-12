@@ -20,22 +20,33 @@ class FeeStructureController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'level' => ['required', 'string'],
+            'levels' => ['required', 'array', 'min:1'],
+            'levels.*' => ['string', 'in:nursery,kindergarten,lower_primary,upper_primary,jhs'],
             'term_id' => ['required', 'exists:terms,id'],
             'fee_type' => ['required', 'in:school_fees,feeding_fees,registration_fees,others'],
-            'amount' => ['required', 'numeric', 'min:0'],
+            'fee_name' => ['nullable', 'string', 'max:255'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'daily_rate' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        FeeStructure::updateOrCreate(
-            [
-                'level' => $data['level'],
-                'term_id' => $data['term_id'],
-                'fee_type' => $data['fee_type'],
-            ],
-            [
-                'amount' => $data['amount'],
-            ]
-        );
+        $isFeeding = $data['fee_type'] === 'feeding_fees';
+
+        // Create fee structure for each selected level
+        foreach ($data['levels'] as $level) {
+            FeeStructure::updateOrCreate(
+                [
+                    'level' => $level,
+                    'term_id' => $data['term_id'],
+                    'fee_type' => $data['fee_type'],
+                ],
+                [
+                    'fee_name' => $data['fee_name'] ?? null,
+                    'amount' => $isFeeding ? null : ($data['amount'] ?? 0),
+                    'daily_rate' => $isFeeding ? ($data['daily_rate'] ?? 0) : null,
+                    'is_recurring' => $isFeeding,
+                ]
+            );
+        }
 
         return back();
     }
@@ -45,9 +56,16 @@ class FeeStructureController extends Controller
         $data = $request->validate([
             'level' => ['required', 'string'],
             'term_id' => ['required', 'exists:terms,id'],
-            'amount' => ['required', 'numeric', 'min:0'],
             'fee_type' => ['required', 'in:school_fees,feeding_fees,registration_fees,others'],
+            'fee_name' => ['nullable', 'string', 'max:255'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'daily_rate' => ['nullable', 'numeric', 'min:0'],
         ]);
+
+        $isFeeding = $data['fee_type'] === 'feeding_fees';
+        $data['amount'] = $isFeeding ? null : ($data['amount'] ?? 0);
+        $data['daily_rate'] = $isFeeding ? ($data['daily_rate'] ?? 0) : null;
+        $data['is_recurring'] = $isFeeding;
 
         $feeStructure->update($data);
 

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import { BookOpen, Plus, Edit, Trash2, GraduationCap } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{
   courses: any;
-  classes: any[];
 }>();
 
 const modalOpen = ref(false);
@@ -16,7 +15,6 @@ const form = useForm({
   code: '',
   description: '',
   level: '',
-  school_class_id: null as number | null,
 });
 
 const openCreateModal = () => {
@@ -31,25 +29,28 @@ const openEditModal = (course: any) => {
   form.code = course.code;
   form.description = course.description;
   form.level = course.level;
-  form.school_class_id = course.school_class_id;
   modalOpen.value = true;
 };
 
 const save = () => {
   if (editingCourse.value) {
-    form.put(route('courses.update', editingCourse.value.id), {
-      onSuccess: () => { modalOpen.value = false; }
+    form.put(`/courses/${editingCourse.value.id}`, {
+      onSuccess: () => {
+ modalOpen.value = false; 
+}
     });
   } else {
-    form.post(route('courses.store'), {
-      onSuccess: () => { modalOpen.value = false; }
+    form.post('/courses', {
+      onSuccess: () => {
+ modalOpen.value = false; 
+}
     });
   }
 };
 
 const deleteCourse = (course: any) => {
   if (confirm('Are you sure you want to delete this course?')) {
-    form.delete(route('courses.destroy', course.id));
+    form.delete(`/courses/${course.id}`);
   }
 };
 </script>
@@ -61,11 +62,12 @@ const deleteCourse = (course: any) => {
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-amber-100/60 pb-5">
-        <div class="flex items-center gap-3">
+        <div>
           <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Courses</h1>
+          <p class="text-sm text-gray-600 mt-1">Global course pool - assign courses to classes during class creation</p>
         </div>
-        <button 
-          @click="openCreateModal" 
+        <button
+          @click="openCreateModal"
           class="inline-flex items-center gap-2 px-4 py-2.5 bg-lime-400 hover:bg-lime-500 text-gray-900 rounded-xl font-bold text-sm shadow-sm transition-all"
         >
           <Plus class="w-4 h-4" />
@@ -81,7 +83,6 @@ const deleteCourse = (course: any) => {
                 <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Name</th>
                 <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Code</th>
                 <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Level</th>
-                <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Class</th>
                 <th class="px-6 py-3.5 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -94,8 +95,7 @@ const deleteCourse = (course: any) => {
                   </div>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-600">{{ course.code }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600">{{ course.level }}</td>
-                <td class="px-6 py-4 text-sm text-gray-600">{{ course.school_class?.name || '-' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-600">{{ course.level || '-' }}</td>
                 <td class="px-6 py-4 text-right whitespace-nowrap space-x-2">
                   <button @click="openEditModal(course)" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold border border-amber-200 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors">
                     <Edit class="w-3 h-3" />
@@ -137,17 +137,9 @@ const deleteCourse = (course: any) => {
                 <input v-model="form.code" type="text" class="w-full border border-amber-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-lime-400 focus:border-lime-400" />
               </div>
               <div>
-                <label class="block text-sm font-bold text-gray-700 mb-1">Level</label>
-                <input v-model="form.level" type="text" class="w-full border border-amber-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-lime-400 focus:border-lime-400" />
+                <label class="block text-sm font-bold text-gray-700 mb-1">Level (Optional)</label>
+                <input v-model="form.level" type="text" placeholder="e.g., JHS, Primary, etc." class="w-full border border-amber-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-lime-400 focus:border-lime-400" />
               </div>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-bold text-gray-700 mb-1">Class</label>
-              <select v-model="form.school_class_id" class="w-full border border-amber-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-lime-400 focus:border-lime-400">
-                <option value="">All Classes</option>
-                <option v-for="cls in classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
-              </select>
             </div>
             
             <div>

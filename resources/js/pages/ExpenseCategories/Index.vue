@@ -30,8 +30,12 @@ const form = useForm({
 
 // Filtered categories
 const filteredCategories = computed(() => {
-  if (!search.value) return props.categories;
+  if (!search.value) {
+return props.categories;
+}
+
   const term = search.value.toLowerCase();
+
   return props.categories.filter(c => c.name.toLowerCase().includes(term));
 });
 

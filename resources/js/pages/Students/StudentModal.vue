@@ -120,6 +120,7 @@ const submit = () => {
 
     onError: (errors: Record<string, string>) => {
       formErrors.value = errors;
+
       if (errors.school_class_id) {
         step.value = 1;
       } else if (errors.first_name || errors.last_name || errors.gender || errors.date_of_birth) {

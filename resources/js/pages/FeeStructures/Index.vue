@@ -44,11 +44,16 @@ const filterLevel = ref('');
 const filterTerm = ref('');
 
 const form = useForm({
+  levels: [],
   level: '',
   term_id: '',
   fee_type: '',
-  amount: ''
+  fee_name: '',
+  amount: '',
+  daily_rate: ''
 });
+
+const isFeedingFee = computed(() => form.fee_type === 'feeding_fees');
 
 // Filtered fees
 const filteredFees = computed(() => {
@@ -94,12 +99,14 @@ const formatFeeType = (type: string) => {
 function openCreate() {
   editing.value = null;
   form.reset();
+  form.levels = [];
   showModal.value = true;
 }
 
 function closeModal() {
   showModal.value = false;
   form.reset();
+  form.levels = [];
   editing.value = null;
 }
 
@@ -107,30 +114,53 @@ function openEdit(fee: Fee) {
   editing.value = fee;
   form.reset();
   form.level = fee.level;
+  form.levels = [];
   form.term_id = String(fee.term.id);
   form.fee_type = fee.fee_type;
-  form.amount = String(fee.amount);
+  form.fee_name = (fee as any).fee_name || '';
+  form.amount = fee.fee_type === 'feeding_fees' ? '' : String(fee.amount);
+  form.daily_rate = (fee as any).daily_rate ? String((fee as any).daily_rate) : '';
   showModal.value = true;
 }
 
 function submit() {
-  if (!form.level) {
-    alert('Please enter a level');
-    return;
+  if (editing.value) {
+    // Editing: require single level
+    if (!form.level) {
+      alert('Please select a level');
+
+      return;
+    }
+  } else {
+    // Creating: require multiple levels
+    if (!form.levels || form.levels.length === 0) {
+      alert('Please select at least one level');
+
+      return;
+    }
   }
 
   if (!form.term_id) {
     alert('Please select a term');
+
     return;
   }
 
   if (!form.fee_type) {
     alert('Please select a fee type');
+
     return;
   }
 
-  if (!form.amount) {
+  if (isFeedingFee.value && !form.daily_rate) {
+    alert('Please enter the daily feeding fee rate');
+
+    return;
+  }
+
+  if (!isFeedingFee.value && !form.amount) {
     alert('Please enter an amount');
+
     return;
   }
 
@@ -274,12 +304,20 @@ function clearFilters() {
                   {{ fee.term.name }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border', getFeeTypeColor(fee.fee_type)]">
-                    {{ formatFeeType(fee.fee_type) }}
-                  </span>
+                  <div class="flex flex-col">
+                    <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border w-fit', getFeeTypeColor(fee.fee_type)]">
+                      {{ formatFeeType(fee.fee_type) }}
+                    </span>
+                    <span v-if="(fee as any).fee_name" class="text-xs text-gray-500 mt-1">{{ (fee as any).fee_name }}</span>
+                  </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                  {{ formatCurrencyCompact(fee.amount, 2) }}
+                  <span v-if="fee.fee_type === 'feeding_fees'">
+                    ₵{{ (Number((fee as any).daily_rate) || 0).toFixed(2) }}/day
+                  </span>
+                  <span v-else>
+                    {{ formatCurrencyCompact(fee.amount, 2) }}
+                  </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right space-x-3">
                   <button
@@ -322,16 +360,37 @@ function clearFilters() {
           </div>
 
           <form @submit.prevent="submit" class="p-6 space-y-4">
-            <div>
+            <!-- EDITING: Single Level Select -->
+            <div v-if="editing">
               <label class="block text-sm font-medium text-gray-700 mb-1">Level *</label>
               <select
                 v-model="form.level"
-                required
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                disabled
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-600 cursor-not-allowed"
               >
                 <option value="">Select Level</option>
                 <option v-for="opt in LEVEL_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
+              <p class="text-xs text-gray-500 mt-1">Cannot change level when editing</p>
+            </div>
+
+            <!-- CREATING: Multi-Select Levels -->
+            <div v-else>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Levels (Select one or more) *</label>
+              <div class="grid grid-cols-2 gap-2">
+                <label v-for="opt in LEVEL_OPTIONS" :key="opt.value" class="flex items-center gap-2 p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-amber-50">
+                  <input
+                    type="checkbox"
+                    :value="opt.value"
+                    v-model="form.levels"
+                    class="w-4 h-4 text-amber-500 rounded focus:ring-2 focus:ring-amber-500"
+                  />
+                  <span class="text-sm text-gray-700">{{ opt.label }}</span>
+                </label>
+              </div>
+              <p v-if="form.levels.length > 0" class="text-xs text-amber-600 mt-2">
+                Selected: {{ form.levels.map(l => LEVEL_OPTIONS.find(o => o.value === l)?.label).join(', ') }}
+              </p>
             </div>
 
             <div>
@@ -362,6 +421,18 @@ function clearFilters() {
             </div>
 
             <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Custom Fee Name (Optional)</label>
+              <input
+                v-model="form.fee_name"
+                type="text"
+                placeholder="e.g., 'Building Fund', 'PTA Dues'"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              />
+              <p class="text-xs text-gray-500 mt-1">Leave blank to use the default fee type name</p>
+            </div>
+
+            <!-- Regular fee amount -->
+            <div v-if="!isFeedingFee">
               <label class="block text-sm font-medium text-gray-700 mb-1">Amount (GHS) *</label>
               <input
                 v-model="form.amount"
@@ -371,6 +442,20 @@ function clearFilters() {
                 required
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
+            </div>
+
+            <!-- Feeding fee daily rate -->
+            <div v-else>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Daily Rate (GHS/day) *</label>
+              <input
+                v-model="form.daily_rate"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                required
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              />
+              <p class="text-xs text-gray-500 mt-1">Daily rate × days attended = weekly feeding fee (Mon-Fri)</p>
             </div>
 
             <div class="flex gap-3 pt-4">

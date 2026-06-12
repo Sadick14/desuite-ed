@@ -6,6 +6,7 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Term;
 use App\Services\BalanceService;
+use App\Services\FeedingFeeService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -99,8 +100,11 @@ class StudentController extends Controller
             'breakdown' => [],
         ];
 
+        $feedingFeeData = null;
+
         if ($currentTerm) {
             $financial = BalanceService::forStudent($student, $currentTerm);
+            $feedingFeeData = FeedingFeeService::getStudentFeedingBalance($student, $currentTerm);
         }
 
         return Inertia::render('Students/Show', [
@@ -109,6 +113,7 @@ class StudentController extends Controller
             'classes' => SchoolClass::all(),
 
             'financial' => $financial,
+            'feedingFeeData' => $feedingFeeData,
 
             'payments' => $student->payments()
                 ->with('term')

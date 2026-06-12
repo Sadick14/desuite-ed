@@ -45,6 +45,12 @@ class SchoolClass extends Model
         return $this->hasMany(StudentEnrollment::class);
     }
 
+    public function courses()
+    {
+        return $this->belongsToMany(Course::class, 'class_courses', 'class_id', 'course_id')
+            ->withTimestamps();
+    }
+
     // feeStructures() removed — fee_structures table uses 'level' enum (not school_class_id)
     // Query FeeStructure::where('level', $class->level) directly when needed
 

@@ -50,11 +50,15 @@ const openEditModal = (exam: any) => {
 const save = () => {
   if (editingExam.value) {
     form.put(route('exams.update', editingExam.value.id), {
-      onSuccess: () => { modalOpen.value = false; }
+      onSuccess: () => {
+ modalOpen.value = false; 
+}
     });
   } else {
     form.post(route('exams.store'), {
-      onSuccess: () => { modalOpen.value = false; }
+      onSuccess: () => {
+ modalOpen.value = false; 
+}
     });
   }
 };

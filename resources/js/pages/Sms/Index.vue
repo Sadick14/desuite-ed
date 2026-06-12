@@ -19,7 +19,9 @@ const filteredLogs = computed(() => {
     if (!search.value) {
         return props.smsLogs.data;
     }
+
     const term = search.value.toLowerCase();
+
     return props.smsLogs.data.filter((log: any) =>
         log.recipient_name?.toLowerCase().includes(term) ||
         log.recipient_phone?.includes(term) ||
@@ -33,6 +35,7 @@ const getStatusBadge = (status: string) => {
         failed: { class: 'bg-red-100 text-red-800 border-red-200', label: 'Failed' },
         pending: { class: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: 'Pending' },
     };
+
     return badges[status] || badges.pending;
 };
 
@@ -44,6 +47,7 @@ const getTypeBadge = (type: string) => {
         announcement: { class: 'bg-purple-100 text-purple-800 border-purple-200', label: 'Announcement' },
         attendance: { class: 'bg-pink-100 text-pink-800 border-pink-200', label: 'Attendance' },
     };
+
     return types[type] || { class: 'bg-gray-100 text-gray-800 border-gray-200', label: type };
 };
 

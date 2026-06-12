@@ -47,26 +47,31 @@ const profit = computed(() => {
   if (props.stats.payments !== undefined && props.stats.expenses !== undefined) {
     return props.stats.payments - props.stats.expenses;
   }
+
   return 0;
 });
 const profitMargin = computed(() => {
   if (props.stats.payments !== undefined && props.stats.payments > 0) {
     return ((profit.value / props.stats.payments) * 100).toFixed(1);
   }
+
   return '0';
 });
 
 const avgPaymentPerStudent = computed(() => {
   if (props.stats.students > 0 && props.stats.payments !== undefined) {
     const amount = props.stats.payments / props.stats.students;
+
     return formatCurrencyCompact(amount, 2);
   }
+
   return formatCurrencyCompact(0);
 });
 
 // Date range compute block
 const dateRange = computed(() => {
   const now = new Date();
+
   return `${now.toLocaleString('default', { month: 'long' })} ${now.getFullYear()}`;
 });
 
@@ -344,7 +349,7 @@ const dashboardTitle = computed(() => {
             <h3 class="font-bold text-gray-900 flex items-center gap-2 text-sm uppercase tracking-wider">
               <Award class="w-4 h-4 text-lime-600 stroke-[2.5]" /> Recent Grades
             </h3>
-            <a href="/grades" class="text-xs font-bold text-indigo-600 hover:underline">View all</a>
+            <a href="/student-marks" class="text-xs font-bold text-indigo-600 hover:underline">View all</a>
           </div>
           <div class="space-y-3">
             <div v-for="grade in recentGrades?.slice(0, 4)" :key="grade.id" class="flex justify-between items-center border-b border-amber-50/60 pb-2.5 last:border-0 last:pb-0">
@@ -392,7 +397,7 @@ const dashboardTitle = computed(() => {
             </div>
             <span class="text-xs font-bold text-gray-700 group-hover:text-gray-900">Mark Attendance</span>
           </a>
-          <a href="/grades" class="flex flex-col items-center gap-2.5 p-4 rounded-xl bg-lime-50/40 border border-lime-100/40 hover:bg-lime-50 transition group text-center">
+          <a href="/student-marks" class="flex flex-col items-center gap-2.5 p-4 rounded-xl bg-lime-50/40 border border-lime-100/40 hover:bg-lime-50 transition group text-center">
             <div class="p-2.5 rounded-xl bg-white border border-lime-100 group-hover:border-lime-300 transition shadow-sm">
               <Award class="w-5 h-5 text-lime-800" />
             </div>

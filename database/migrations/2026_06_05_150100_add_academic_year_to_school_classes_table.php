@@ -16,8 +16,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('school_classes', function (Blueprint $table) {
-            $table->dropForeignKeyIfExists(['academic_year_id']);
-            $table->dropColumn('academic_year_id');
+            if (Schema::hasColumn('school_classes', 'academic_year_id')) {
+                $table->dropForeign(['academic_year_id']);
+                $table->dropColumn('academic_year_id');
+            }
         });
     }
 };

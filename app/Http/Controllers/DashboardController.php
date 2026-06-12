@@ -7,7 +7,7 @@ use App\Models\Expense;
 use App\Models\Payment;
 use App\Models\SchoolClass;
 use App\Models\Student;
-use App\Models\Grade;
+use App\Models\StudentMark;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -26,6 +26,7 @@ class DashboardController extends Controller
                 'classes' => SchoolClass::count(),
                 'payments' => Payment::sum('amount'),
                 'expenses' => Expense::sum('amount'),
+                'grades' => StudentMark::where('status', 'approved')->count(),
             ],
             'recentPayments' => Payment::with('student')
                 ->latest()
@@ -55,18 +56,19 @@ class DashboardController extends Controller
                     'students' => Student::count(),
                     'classes' => SchoolClass::count(),
                     'attendance' => Attendance::whereDate('date', today())->count(),
-                    'grades' => Grade::count(),
+                    'grades' => StudentMark::count(),
                 ];
-                $data['recentGrades'] = Grade::with('student', 'exam')
+                $data['recentGrades'] = StudentMark::with('student', 'course')
                     ->latest()
                     ->take(5)
                     ->get()
-                    ->map(fn ($g) => [
-                        'id' => $g->id,
-                        'student' => $g->student?->name ?? 'Unknown',
-                        'exam' => $g->exam?->title ?? 'Unknown',
-                        'score' => $g->score,
-                        'date' => $g->created_at,
+                    ->map(fn ($m) => [
+                        'id' => $m->id,
+                        'student' => $m->student?->first_name.' '.$m->student?->last_name ?? 'Unknown',
+                        'course' => $m->course?->name ?? 'Unknown',
+                        'final_score' => $m->final_score,
+                        'letter_grade' => $m->letter_grade,
+                        'date' => $m->created_at,
                     ]);
                 $data['recentAttendance'] = Attendance::with('student')
                     ->latest()
@@ -79,24 +81,26 @@ class DashboardController extends Controller
                         'date' => $a->date,
                     ]);
                 break;
-                
+
             case 'student':
             case 'parent':
                 // For parent/student, we might filter to specific student later
                 $data['stats'] = [
                     'attendancePercentage' => 0,
-                    'gradeAverage' => Grade::avg('score') ?? 0,
+                    'gradeAverage' => StudentMark::where('status', 'approved')->avg('final_score') ?? 0,
                     'upcomingExams' => 0,
                 ];
-                $data['myGrades'] = Grade::with('exam')
+                $data['myGrades'] = StudentMark::with('course')
+                    ->where('status', 'approved')
                     ->latest()
                     ->take(10)
                     ->get()
-                    ->map(fn ($g) => [
-                        'id' => $g->id,
-                        'exam' => $g->exam?->title ?? 'Unknown',
-                        'score' => $g->score,
-                        'date' => $g->created_at,
+                    ->map(fn ($m) => [
+                        'id' => $m->id,
+                        'course' => $m->course?->name ?? 'Unknown',
+                        'final_score' => $m->final_score,
+                        'letter_grade' => $m->letter_grade,
+                        'date' => $m->created_at,
                     ]);
                 break;
         }

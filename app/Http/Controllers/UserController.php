@@ -16,7 +16,7 @@ class UserController extends Controller
     public function index()
     {
         $users = User::paginate(10);
-        
+
         return Inertia::render('Users/Index', [
             'users' => $users,
             'roles' => TeamRole::assignable(),
@@ -40,10 +40,13 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
-            'role' => 'required|in:admin,teacher,student,parent,member',
+            'role' => 'nullable|in:admin,teacher,student,parent,member',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
+
+        // Default to 'member' role if not specified (admin-added users)
+        $validated['role'] = $validated['role'] ?? TeamRole::Member;
 
         User::create($validated);
 
@@ -73,7 +76,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:8',
             'role' => 'required|in:admin,teacher,student,parent,member',
         ]);

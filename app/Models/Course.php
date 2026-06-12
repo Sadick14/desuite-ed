@@ -14,12 +14,12 @@ class Course extends Model
         'code',
         'description',
         'level',
-        'school_class_id',
     ];
 
-    public function schoolClass()
+    public function classes()
     {
-        return $this->belongsTo(SchoolClass::class);
+        return $this->belongsToMany(SchoolClass::class, 'class_courses', 'course_id', 'class_id')
+            ->withTimestamps();
     }
 
     public function exams()
