@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { BarChart3, TrendingUp, PieChart } from 'lucide-vue-next';
+import { BarChart3, TrendingUp } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 interface OverallStats {

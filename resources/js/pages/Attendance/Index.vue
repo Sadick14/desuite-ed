@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { Calendar, Plus, Check, X, AlertCircle, Filter, Save } from 'lucide-vue-next';
+import { Head, router } from '@inertiajs/vue3';
+import { Calendar, AlertCircle, Save } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
-import { formatDate } from '@/utils/format';
 
 type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
 

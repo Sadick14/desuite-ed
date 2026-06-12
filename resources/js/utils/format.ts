@@ -40,3 +40,12 @@ return 'GHS 0';
 
   return `GHS ${formatCurrency(value, decimals)}`;
 }
+
+export function formatDate(date: string | Date): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return dateObj.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
