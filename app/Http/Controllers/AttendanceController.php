@@ -97,19 +97,25 @@ class AttendanceController extends Controller
         $academicYear = $activeTerm->academicYear;
 
         DB::transaction(function () use ($data, $activeTerm, $academicYear) {
+            $records = [];
+
             foreach ($data['attendances'] as $attendance) {
-                Attendance::updateOrCreate(
-                    [
-                        'student_id' => $attendance['student_id'],
-                        'attendance_date' => $data['attendance_date'],
-                    ],
-                    [
-                        'school_class_id' => $data['class_id'],
-                        'academic_year_id' => $academicYear->id,
-                        'term_id' => $activeTerm->id,
-                        'status' => $attendance['status'],
-                        'notes' => $attendance['notes'] ?? null,
-                    ]
+                $records[] = [
+                    'student_id' => $attendance['student_id'],
+                    'attendance_date' => $data['attendance_date'],
+                    'school_class_id' => $data['class_id'],
+                    'academic_year_id' => $academicYear->id,
+                    'term_id' => $activeTerm->id,
+                    'status' => $attendance['status'],
+                    'notes' => $attendance['notes'] ?? null,
+                ];
+            }
+
+            if (!empty($records)) {
+                Attendance::upsert(
+                    $records,
+                    ['student_id', 'attendance_date'],
+                    ['school_class_id', 'academic_year_id', 'term_id', 'status', 'notes']
                 );
             }
         });
