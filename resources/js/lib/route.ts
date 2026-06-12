@@ -13,7 +13,11 @@ function resolveRoute(name: string, params?: RouteParams | any): string {
     const routePatterns: Record<string, string> = {
         'attendance.index': '/attendance',
         'attendance.store': '/attendance/store',
-        'attendance.student': '/attendance/students/{student}',
+        'attendance.bulkStore': '/attendance/bulk',
+        'attendance.history': '/attendance/history',
+        'attendance.report': '/attendance/report',
+        'attendance.analytics': '/attendance/analytics',
+        'attendance.destroy': '/attendance/{attendance}',
         'students.show': '/students/{student}',
         'reports.show': '/reports/{id}',
         'reports.download': '/reports/{id}/download',
